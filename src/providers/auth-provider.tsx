@@ -44,8 +44,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname(); // Get the current route
 
-  // Check if the current path is a dynamic student ID route (matching /ST12345 format)
-  const isStudentRoute = /^\/ST\d+/.test(pathname);
+  // Check if the current path is a dynamic student ID route (path is a number)
+  const isStudentRoute = /^\/\d+/.test(pathname);
 
   const isProtectedRoute =
     pathname.startsWith("/home") ||
@@ -103,6 +103,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // to prevent infinite loop
       setAccessToken(null);
       setUser(null);
+      setIsLoading(false);
       return null;
     }
   }, [isProtectedRoute]); // Removed logout from dependencies to break the cycle

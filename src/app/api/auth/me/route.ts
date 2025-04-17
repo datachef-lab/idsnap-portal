@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import {  verifyRefreshToken, generateTokens } from "@/lib/services/auth-service";
+import { verifyRefreshToken, generateTokens } from "@/lib/services/auth-service";
 import { getStudentByEmail, } from "@/lib/services/student-service";
 import { getUserByEmail } from "@/lib/services/user-service";
 import { Student, User } from "@/lib/db/schema";
@@ -44,17 +44,28 @@ export async function GET() {
         // Get user details
         let user: User | Student | null = null;
         user = await getUserByEmail(email);
-        console.log("ME endpoint - User:", user);
+        console.log("ME endpoint - Admin User check:", user ? "Found admin" : "No admin user");
 
         if (!user) {
+            console.log("ME endpoint - Attempting to find student with email:", email);
             user = await getStudentByEmail(`${email.trim()}`);
+            console.log("ME endpoint - Student lookup result:", user ? "Found student" : "No student found");
         }
-        
+
         if (!user) {
             return NextResponse.json(
                 { error: "User not found" },
                 { status: 404 }
             );
+        }
+
+        // Add extra log for student data
+        if ("uid" in user) {
+            console.log("ME endpoint - Student data:", {
+                uid: user.uid,
+                email: user.email,
+                hasUid: !!user.uid
+            });
         }
 
         // Generate new tokens using our consistent method

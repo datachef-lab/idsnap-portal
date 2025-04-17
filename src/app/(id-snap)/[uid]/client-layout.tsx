@@ -17,23 +17,49 @@ export default function StudentIdClientLayout({
   const pathname = usePathname();
 
   // Extract UID from the pathname
-  const uid = pathname.split("/").pop() || "";
+  const pathUid = pathname.split("/").pop() || "";
 
   // Check authentication on client side for extra security
   useEffect(() => {
     // Only redirect if we're sure authentication has been checked
     if (!isLoading) {
+      console.log("Authentication check completed:", {
+        userExists: !!user,
+        pathUid,
+        userUid: user && "uid" in user ? user.uid : undefined,
+        isStudent: user && "uid" in user,
+        userData: user ? JSON.stringify(user) : "null",
+      });
+
       if (!user) {
         console.log("No user found, redirecting to login");
         router.push("/");
-      } else if (!("uid" in user) || user.uid !== uid) {
-        console.log(
-          `UID mismatch or user is not a student, redirecting to login`
-        );
+      } else if (!("uid" in user)) {
+        console.log("User is not a student, redirecting to login");
         router.push("/");
+      } else {
+        // Now we can safely use user.uid since we've checked it exists
+        // TypeScript understands this is a Student type after the 'uid' in user check
+        const normalizedUserUid = user.uid?.startsWith("ST")
+          ? user.uid.substring(2)
+          : user.uid;
+        const normalizedPathUid = pathUid?.startsWith("ST")
+          ? pathUid.substring(2)
+          : pathUid;
+
+        console.log(
+          `Comparing UIDs - User: ${normalizedUserUid} (${user.uid}), Path: ${normalizedPathUid} (${pathUid})`
+        );
+
+        if (normalizedUserUid !== normalizedPathUid) {
+          console.log(`UID mismatch, redirecting to login`);
+          router.push("/");
+        } else {
+          console.log("UID match confirmed, allowing access");
+        }
       }
     }
-  }, [user, isLoading, router, uid]);
+  }, [user, isLoading, router, pathUid]);
 
   // Show a loader while checking authentication
   if (isLoading) {

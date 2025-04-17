@@ -81,6 +81,14 @@ export default function Home() {
         const { accessToken, refreshToken, uid, userType, redirectUrl } =
           data.data;
 
+        console.log("OTP verification successful - Received data:", {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          uid,
+          userType,
+          redirectUrl,
+        });
+
         // Store tokens and user info in localStorage for client-side access
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);

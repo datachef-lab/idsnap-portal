@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
+    console.log(`Middleware processing path: ${pathname}`);
 
     // Skip middleware completely for these paths
     if (pathname === '/logout') {
@@ -14,37 +15,51 @@ export function middleware(request: NextRequest) {
     const uid = request.cookies.get('uid')?.value;
     const userType = request.cookies.get('userType')?.value;
 
-    // console.log("in middleware, ", refreshToken, uid, userType);
+    console.log(`Auth cookies - uid: ${uid}, userType: ${userType}, hasToken: ${!!refreshToken}`);
 
     // Check if user is authenticated
     const isAuthenticated = !!refreshToken && !!uid;
-    // console.log("isAuthenticated", isAuthenticated);
+    console.log(`isAuthenticated: ${isAuthenticated}`);
 
     // For the root path / (login page)
     if (pathname === '/' || pathname === '/api/auth/send-otp' || pathname === '/api/auth/verify-otp') {
         // Always allow access to the root path and auth endpoints, regardless of authentication status
+        console.log('Access allowed to auth route');
         return NextResponse.next();
     }
 
-    // Check if path is a dynamic student profile path (e.g., /ST12345)
-    const studentUidMatch = pathname.match(/^\/ST\d+$/);
-    const isStudentPath = !!studentUidMatch;
+    // Check if path is a dynamic student profile path (any non-empty string that isn't a reserved path)
+    // Exclude known paths like /home, /admin, /api, /logout
+    const isReservedPath = pathname.startsWith('/home') ||
+        pathname.startsWith('/admin') ||
+        pathname.startsWith('/api') ||
+        pathname === '/logout';
+
+    // Student paths are numeric UIDs
+    const isNumericUid = /^\d+$/.test(pathname.slice(1));
+    const isStudentPath = pathname.length > 1 && !isReservedPath && isNumericUid;
+    console.log(`Is student path: ${isStudentPath}, path: ${pathname}, isNumeric: ${isNumericUid}`);
 
     // Protected routes - student profiles
     if (isStudentPath) {
         // Extract UID from the path (remove the leading slash)
         const pathUid = pathname.slice(1);
 
-        // console.log(`Checking student path: path=${pathUid}, cookie=${uid}`);
+        // Normalize UIDs for comparison
+        // The uid cookie might have "ST" prefix, we need to normalize both sides
+        const normalizedCookieUid = uid?.startsWith('ST') ? uid.substring(2) : uid;
+        const normalizedPathUid = pathUid.startsWith('ST') ? pathUid.substring(2) : pathUid;
+
+        console.log(`Student path check - normalized path UID: ${normalizedPathUid}, normalized cookie UID: ${normalizedCookieUid}`);
 
         // If not authenticated or UID doesn't match, redirect to login
-        if (!isAuthenticated || pathUid !== uid) {
-            console.log("Student auth failed, redirecting to login");
+        if (!isAuthenticated || normalizedPathUid !== normalizedCookieUid) {
+            console.log(`Student auth failed, redirecting to login. Auth: ${isAuthenticated}, UIDs match: ${normalizedPathUid === normalizedCookieUid}`);
             return NextResponse.redirect(new URL('/', request.url));
         }
 
         // User is authenticated with matching UID, allow access
-        // console.log("Student auth passed");
+        console.log("Student auth passed, allowing access");
         return NextResponse.next();
     }
 
@@ -71,7 +86,7 @@ export const config = {
     // Make sure to include all routes that need middleware protection
     matcher: [
         '/',
-        '/ST:uid*',
+        '/:uid+', // Match any non-empty string for uid
         '/logout',
         '/home',
         '/home/upload',

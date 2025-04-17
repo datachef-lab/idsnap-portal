@@ -17,13 +17,25 @@ export default function StudentProfileClient() {
   const pathname = usePathname();
   const uid = pathname.split("/").pop() || "";
 
+  console.log(
+    `Client page - pathname: ${pathname}, extracted UID: ${uid}, user.uid: ${
+      (user as Student)?.uid || "unknown"
+    }`
+  );
+
   // Keep loading state for future use
   const [loading] = useState(false);
 
   const handleSubmit = async (formData: FormData) => {
     try {
+      // Get the UID from auth context or URL pathname
+      // Use the full UID with ST prefix if available in the user object
+      const authUid = (user as Student)?.uid || uid;
+
+      console.log(`Submitting verification with UID: ${authUid}`);
+
       // Add UID to the form data
-      formData.append("uid", uid);
+      formData.append("uid", authUid);
 
       // Call the verify API
       const response = await fetch("/api/students/verify", {
@@ -98,7 +110,9 @@ export default function StudentProfileClient() {
         {/* Simple student info banner */}
         <div className="text-center mb-6">
           <h2 className="text-xl font-bold">{name}</h2>
-          <p className="text-gray-500 text-sm">UID: {uid.substring(2)}</p>
+          <p className="text-gray-500 text-sm">
+            UID: {uid.startsWith("ST") ? uid.substring(2) : uid}
+          </p>
           <div className="flex justify-center mt-2 text-sm">
             <span className="px-2 border-r border-gray-300">{course}</span>
             <span className="px-2 border-r border-gray-300">{section}</span>

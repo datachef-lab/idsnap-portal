@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
             user = await getStudentByUid(`${username.trim()}`);
         }
 
-    
+
 
         // Validate input
         if (!username || !otp) {
@@ -63,8 +63,18 @@ export async function POST(request: NextRequest) {
                 .set({ checkedAt: new Date() })
                 .where(eq(studentTable.email, user.email as string));
 
-            // Determine redirect URL based on user type
-            const redirectUrl = isStudent ? `/${(user as Student).uid}` : '/home';
+            // Get UID for student redirect (use the full UID with prefix)
+            const studentUid = isStudent ? (user as Student).uid : null;
+
+            // Extract numeric UID without the ST prefix for the URL
+            const numericUid = isStudent && studentUid?.startsWith('ST')
+                ? studentUid.substring(2)
+                : studentUid;
+
+            // Determine redirect URL based on user type - use numeric UID without ST prefix
+            const redirectUrl = isStudent ? `/${numericUid}` : '/home';
+
+            console.log(`Auth successful, redirecting to: ${redirectUrl}, Full UID: ${studentUid}, Numeric UID: ${numericUid}`);
 
             // Generate auth tokens using the proper JWT function
             const { accessToken, refreshToken } = generateTokens(user);
@@ -79,7 +89,7 @@ export async function POST(request: NextRequest) {
                 data: {
                     accessToken,
                     refreshToken,
-                    uid: isStudent ? (user as Student).uid : null,
+                    uid: studentUid,
                     userType,
                     redirectUrl
                 }
@@ -162,15 +172,25 @@ export async function POST(request: NextRequest) {
             abcId: 'ABC123456'
         };
 
+        // Get UID for student redirect (use the full UID with prefix)
+        const studentUid = 'uid' in dummyUser ? dummyUser.uid : null;
+
+        // Extract numeric UID without the ST prefix for the URL
+        const numericUid = 'uid' in dummyUser && studentUid?.startsWith('ST')
+            ? studentUid.substring(2)
+            : studentUid;
+
+        // Determine redirect URL based on user type - use numeric UID without ST prefix
+        const redirectUrl = 'uid' in dummyUser ? `/${numericUid}` : '/home';
+
+        console.log(`Fallback auth successful, redirecting to: ${redirectUrl}, Full UID: ${studentUid}, Numeric UID: ${numericUid}`);
+
         // Generate auth tokens using the proper JWT function
         const { accessToken, refreshToken } = generateTokens(dummyUser);
 
         // Determine user type based on presence of uid property
         const userType = "student";
         const uid = dummyUser.uid;
-
-        // Determine redirect URL based on user type
-        const redirectUrl = `/${uid}`;
 
         // Create response with cookies
         const response = NextResponse.json({
@@ -199,7 +219,7 @@ export async function POST(request: NextRequest) {
             httpOnly: true,
             secure: false,
             sameSite: 'lax',
-            
+
             maxAge: 30 * 24 * 60 * 60, // 30 days
         });
 
