@@ -173,7 +173,7 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
         <CardHeader className="pb-4 pt-6">
           <CardTitle className="flex items-center justify-center gap-2 text-indigo-700">
             <Check className="text-green-500" />
-            Verification Submitted
+            Confirmation Submitted
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -356,7 +356,7 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
                 <div className="mb-5 rounded-lg overflow-hidden border border-gray-200">
                   <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2">
                     <p className="text-white font-medium">
-                      How to Upload Your ABC ID
+                      Instructions on Apaar ID screenshot upload
                     </p>
                   </div>
 
@@ -478,7 +478,7 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
               disabled={loading || !file}
               className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              {loading ? "Submitting..." : "Submit Verification"}
+              {loading ? "Submitting..." : "Submit Confirmation"}
               {!loading && <Upload size={16} className="ml-2" />}
             </Button>
           </>
