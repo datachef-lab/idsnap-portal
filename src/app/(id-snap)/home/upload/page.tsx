@@ -72,6 +72,10 @@ export default function UploadStudentDataPage() {
     const formData = new FormData();
     formData.append("file", file);
 
+    // Add file metadata to help server-side processing
+    formData.append("fileName", file.name);
+    formData.append("fileType", file.type);
+
     // Simulate upload progress
     const interval = setInterval(() => {
       setProgress((prev) => {

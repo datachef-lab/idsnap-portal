@@ -13,9 +13,9 @@ export async function POST(request: NextRequest) {
         const uid = formData.get('uid') as string;
 
         // Validate required data
-        if (!file || !(file instanceof File)) {
+        if (!file || !(file instanceof Blob)) {
             return NextResponse.json(
-                { success: false, message: 'No file provided' },
+                { success: false, message: 'No valid file provided' },
                 { status: 400 }
             );
         }
@@ -44,13 +44,13 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Determine file type and extension
-        const fileType = file.type;
+        // Get the file type from the FormData (in Node.js we can't rely on file.type)
+        const fileType = formData.get('fileType') as string || 'image/jpeg';
         let fileExtension = '';
 
-        if (fileType === 'image/jpeg' || fileType === 'image/jpg') {
+        if (fileType.includes('jpeg') || fileType.includes('jpg')) {
             fileExtension = '.jpg';
-        } else if (fileType === 'image/png') {
+        } else if (fileType.includes('png')) {
             fileExtension = '.png';
         } else {
             return NextResponse.json(

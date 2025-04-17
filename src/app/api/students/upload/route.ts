@@ -9,16 +9,20 @@ export async function POST(request: NextRequest) {
         const formData = await request.formData();
         const file = formData.get('file');
 
-        if (!file || !(file instanceof File)) {
+        // Check if file exists and is a Blob (more generic than File which is browser-specific)
+        if (!file || !(file instanceof Blob)) {
             return NextResponse.json(
-                { success: false, message: 'No file provided' },
+                { success: false, message: 'No valid file provided' },
                 { status: 400 }
             );
         }
 
-        // Check file type
-        const fileName = file.name.toLowerCase();
-        if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+        // Get file name - formData files in Node environment might not have 'name' property directly
+        const fileName = formData.get('fileName') as string || 'upload.xlsx';
+
+        // Check file type based on fileName
+        const lowerFileName = fileName.toLowerCase();
+        if (!lowerFileName.endsWith('.xlsx') && !lowerFileName.endsWith('.xls')) {
             return NextResponse.json(
                 { success: false, message: 'Invalid file type. Only Excel files (.xlsx, .xls) are allowed.' },
                 { status: 400 }

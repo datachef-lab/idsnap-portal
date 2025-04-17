@@ -94,6 +94,10 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
       formData.append("file", file);
       formData.append("abcId", abcId);
 
+      // Add file metadata to help server-side processing
+      formData.append("fileName", file.name);
+      formData.append("fileType", file.type);
+
       await onSubmit(formData);
       setSuccess(true);
     } catch (err) {
