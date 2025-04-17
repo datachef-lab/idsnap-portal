@@ -144,7 +144,7 @@ export default function Home() {
       <div className="flex-1 flex flex-col items-center justify-center w-full px-4">
         <div className="w-full text-center py-8">
           <h1 className="text-5xl font-bold mt-2 mb-2 text-white">
-            IDSnap Portal
+            Portal for ABC ID (APAAR ID) confirmation portal
           </h1>
           <p className="text-white/90 text-lg">ABC ID Verification System</p>
         </div>
