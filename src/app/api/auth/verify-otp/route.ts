@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
         user = await getUserByEmail(username);
 
         if (!user) {
-            user = await getStudentByUid(`ST${username.trim()}`);
+            user = await getStudentByUid(`${username.trim()}`);
         }
 
     
