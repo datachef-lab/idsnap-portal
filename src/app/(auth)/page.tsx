@@ -143,7 +143,7 @@ export default function Home() {
       {/* Form in center */}
       <div className="flex-1 flex flex-col items-center justify-center w-full px-4">
         <div className="w-full text-center py-8">
-          <h1 className="text-5xl font-bold mt-2 mb-2 text-white">
+          <h1 className="text-2xl font-bold mt-2 mb-2 text-white">
             Portal for ABC ID (APAAR ID) confirmation portal
           </h1>
           <p className="text-white/90 text-lg">ABC ID Verification System</p>
@@ -157,7 +157,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <p className="text-center text-gray-600 text-sm mb-6">
+              <p className="text-center text-sm text-gray-600  mb-6">
                 Verify your UID to continue with ABC ID verification
               </p>
 
