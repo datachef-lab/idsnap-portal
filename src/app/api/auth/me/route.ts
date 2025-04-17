@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getUserByEmail, verifyRefreshToken, generateTokens } from "@/lib/services/auth-service";
+import {  verifyRefreshToken, generateTokens } from "@/lib/services/auth-service";
+import { getStudentByEmail, } from "@/lib/services/student-service";
+import { getUserByEmail } from "@/lib/services/user-service";
+import { Student, User } from "@/lib/db/schema";
 
 export async function GET() {
     try {
@@ -39,8 +42,14 @@ export async function GET() {
         const email = payload.email;
 
         // Get user details
-        const user = await getUserByEmail(email);
+        let user: User | Student | null = null;
+        user = await getUserByEmail(email);
         console.log("ME endpoint - User:", user);
+
+        if (!user) {
+            user = await getStudentByEmail(`${email.trim()}`);
+        }
+        
         if (!user) {
             return NextResponse.json(
                 { error: "User not found" },
