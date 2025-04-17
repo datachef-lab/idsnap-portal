@@ -196,12 +196,12 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
             {previewUrl && (
               <div className="mt-5 border border-indigo-100 rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-sm">
                 <p className="text-sm font-medium text-indigo-700 mb-3">
-                  Your uploaded verification image:
+                  Your uploaded image:
                 </p>
                 <div className="bg-white p-2 rounded shadow-sm">
                   <Image
                     src={previewUrl}
-                    alt="Verification"
+                    alt="screenshot"
                     width={192}
                     height={192}
                     className="max-h-48 mx-auto rounded"
@@ -214,12 +214,12 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
             {!previewUrl && verificationImageUrl && (
               <div className="mt-5 border border-indigo-100 rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-sm">
                 <p className="text-sm font-medium text-indigo-700 mb-3">
-                  Your verification image:
+                  Your Screenshot:
                 </p>
                 <div className="bg-white p-2 rounded shadow-sm">
                   <Image
                     src={verificationImageUrl}
-                    alt="Verification"
+                    alt="screenshot"
                     width={192}
                     height={192}
                     className="max-h-48 mx-auto rounded"
@@ -253,7 +253,7 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
             ? "Confirm Your ABC ID"
             : step === 2
             ? "Upload ID Screenshot"
-            : "Submit Verification"}
+            : "Submit Screenshot"}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
