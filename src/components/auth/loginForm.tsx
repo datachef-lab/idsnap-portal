@@ -65,7 +65,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
 
     try {
       // In a real app, this would be an API call to verify the OTP
-      // For demo purposes, we'll simulate success
+      // For demo purposes, we&apos;ll simulate success
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       // Call the parent submit function again to trigger the redirect
@@ -135,7 +135,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                OTP is valid for 2 minutes. Didn't receive?{" "}
+                OTP is valid for 2 minutes. Didn&apos;t receive?{" "}
                 <button
                   type="button"
                   className="text-primary hover:underline"
@@ -166,7 +166,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
         <p className="text-sm text-gray-500">
           {otpSent
             ? "Check your email for the OTP"
-            : "You'll receive a one-time password on your email"}
+            : "You&apos;ll receive a one-time password on your email"}
         </p>
       </CardFooter>
     </Card>

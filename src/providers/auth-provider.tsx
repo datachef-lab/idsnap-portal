@@ -44,8 +44,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname(); // Get the current route
 
+  // Check if the current path is a dynamic student ID route (matching /ST12345 format)
+  const isStudentRoute = /^\/ST\d+/.test(pathname);
+
   const isProtectedRoute =
-    pathname.startsWith("/home") || pathname.startsWith("/settings");
+    pathname.startsWith("/home") ||
+    pathname.startsWith("/settings") ||
+    isStudentRoute;
 
   const login = (accessToken: string, userData: Student) => {
     setAccessToken(accessToken);
@@ -60,7 +65,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
-    if (pathname.startsWith("/home") || pathname.startsWith("/settings")) {
+    if (
+      pathname.startsWith("/home") ||
+      pathname.startsWith("/settings") ||
+      isStudentRoute
+    ) {
       try {
         await axiosInstance.post("/api/auth/logout");
         setAccessToken(null);
@@ -73,7 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         router.push("/");
       }
     }
-  }, [router, pathname]);
+  }, [router, pathname, isStudentRoute]);
 
   const generateNewToken = useCallback(async (): Promise<string | null> => {
     if (!isProtectedRoute) return null; // ✅ Skip request if not on protected route
@@ -90,51 +99,91 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return response.data.accessToken;
     } catch (error) {
       console.error("Failed to refresh token:", error);
-      logout();
+      // Don't call logout directly here, set a flag for invalid token instead
+      // to prevent infinite loop
+      setAccessToken(null);
+      setUser(null);
       return null;
     }
-  }, [logout, isProtectedRoute]);
+  }, [isProtectedRoute]); // Removed logout from dependencies to break the cycle
 
   useEffect(() => {
-    if (!isProtectedRoute) return; // ✅ Skip request if not on protected route
+    if (!isProtectedRoute) {
+      setIsLoading(false);
+      return;
+    } // ✅ Skip request if not on protected route
+
+    let isMounted = true;
 
     const checkSession = async () => {
       try {
-        console.log("Checking existing session...");
+        console.log("Checking existing session with API...");
         const response = await axiosInstance.get<{
           accessToken: string;
           user: Student;
         }>("/api/auth/me", { withCredentials: true });
 
-        console.log("Session check response:", response.data);
-        setAccessToken(response.data.accessToken);
+        if (isMounted) {
+          console.log("Session check response:", response.data);
+          setAccessToken(response.data.accessToken);
 
-        if (response.data.user) {
-          setUser({ ...response.data.user });
+          if (response.data.user) {
+            setUser({ ...response.data.user });
+          }
         }
       } catch (error) {
         console.log(
           "No existing session found, will try to refresh token,",
           error
         );
-        if (accessToken === null) {
-          await generateNewToken();
+        // Only attempt token refresh once
+        if (accessToken === null && isMounted) {
+          try {
+            await generateNewToken();
+          } catch (refreshError) {
+            console.error("Token refresh failed:", refreshError);
+          }
         }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     checkSession();
-  }, [accessToken, generateNewToken, isProtectedRoute]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [generateNewToken, isProtectedRoute, accessToken]);
 
   useEffect(() => {
     if (!isProtectedRoute) return; // ✅ Skip request if not on protected route
 
-    if (accessToken === null && !isLoading) {
-      console.log("Generating accessToken...");
-      generateNewToken();
-    }
+    // Set a maximum number of refresh attempts
+    const MAX_REFRESH_ATTEMPTS = 1;
+    let refreshAttempts = 0;
+
+    const attemptTokenRefresh = async () => {
+      if (
+        accessToken === null &&
+        !isLoading &&
+        refreshAttempts < MAX_REFRESH_ATTEMPTS
+      ) {
+        console.log(
+          `Generating accessToken (attempt ${refreshAttempts + 1})...`
+        );
+        refreshAttempts++;
+        try {
+          await generateNewToken();
+        } catch (error) {
+          console.error("Failed to generate token:", error);
+        }
+      }
+    };
+
+    attemptTokenRefresh();
 
     const requestInterceptor = axiosInstance.interceptors.request.use(
       (config) => {
@@ -150,14 +199,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (
+          error.response?.status === 401 &&
+          !originalRequest._retry &&
+          refreshAttempts < MAX_REFRESH_ATTEMPTS
+        ) {
           originalRequest._retry = true;
-          const newAccessToken = await generateNewToken();
-          if (newAccessToken) {
-            originalRequest.headers[
-              "Authorization"
-            ] = `Bearer ${newAccessToken}`;
-            return axiosInstance(originalRequest);
+          refreshAttempts++;
+
+          try {
+            const newAccessToken = await generateNewToken();
+            if (newAccessToken) {
+              originalRequest.headers[
+                "Authorization"
+              ] = `Bearer ${newAccessToken}`;
+              return axiosInstance(originalRequest);
+            }
+          } catch (refreshError) {
+            console.error("Error refreshing token:", refreshError);
+            // If refresh fails, redirect to login or show error
+            if (isProtectedRoute) {
+              router.push("/");
+            }
+            return Promise.reject(error);
           }
         }
         return Promise.reject(error);
@@ -168,7 +232,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       axiosInstance.interceptors.request.eject(requestInterceptor);
       axiosInstance.interceptors.response.eject(responseInterceptor);
     };
-  }, [accessToken, generateNewToken, logout, isLoading, isProtectedRoute]);
+  }, [accessToken, generateNewToken, isLoading, isProtectedRoute, router]);
 
   const contextValue: AuthContextType = {
     user,

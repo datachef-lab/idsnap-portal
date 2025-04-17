@@ -1,94 +1,123 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAccessToken } from '@/lib/services/auth-service';
-import { getStudentByEmail } from '@/lib/services/student-service';
-import { uploadAbcIdScreenshot } from '@/lib/services/file-service';
-import { sendEmail } from '@/lib/services/notification-service';
+import * as xlsx from 'xlsx';
+import { createStudent } from '@/lib/services/student-service';
+import { Student } from '@/lib/db/schema';
 
 export async function POST(request: NextRequest) {
     try {
-        // Check authentication
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
-        const token = authHeader.split(' ')[1];
-        const payload = verifyAccessToken(token);
-        if (!payload) {
-            return NextResponse.json(
-                { error: 'Invalid token' },
-                { status: 401 }
-            );
-        }
-
-        // Get student from token payload
-        const student = await getStudentByEmail(payload.email);
-        if (!student) {
-            return NextResponse.json(
-                { error: 'Student not found' },
-                { status: 404 }
-            );
-        }
-
-        // Handle file upload
+        // Parse the multipart form data request
         const formData = await request.formData();
-        const file = formData.get('file') as File;
+        const file = formData.get('file');
 
-        if (!file) {
+        if (!file || !(file instanceof File)) {
             return NextResponse.json(
-                { error: 'No file provided' },
+                { success: false, message: 'No file provided' },
                 { status: 400 }
             );
         }
 
         // Check file type
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-        if (!allowedTypes.includes(file.type)) {
+        const fileName = file.name.toLowerCase();
+        if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
             return NextResponse.json(
-                { error: 'Invalid file type. Only JPEG, JPG and PNG are allowed.' },
+                { success: false, message: 'Invalid file type. Only Excel files (.xlsx, .xls) are allowed.' },
                 { status: 400 }
             );
         }
 
-        // Get file as buffer
-        const fileBuffer = Buffer.from(await file.arrayBuffer());
+        // Read the Excel file
+        const fileBuffer = await file.arrayBuffer();
+        const workbook = xlsx.read(fileBuffer, { type: 'array' });
 
-        // Upload file
-        const fileInfo = await uploadAbcIdScreenshot(student.id as number, fileBuffer, file.name);
+        // Get the first sheet
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
 
-        // Update student's ABC ID if provided
-        const abcId = formData.get('abcId') as string;
-        if (abcId && abcId !== student.abcId) {
-            // We would update the ABC ID here if it's changed
-            // This would be implemented in a student service
+        // Convert sheet to JSON
+        const data = xlsx.utils.sheet_to_json<Record<string, unknown>>(worksheet);
+
+        // Process each row
+        const results = {
+            total: data.length,
+            successful: 0,
+            failed: 0,
+            errors: [] as string[]
+        };
+
+        for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            const rowNum = i + 2; // Excel rows start at 1, plus header row
+
+            try {
+                // Validate required fields
+                const requiredFields = ['Name', 'UID', 'Email', 'Phone', 'Semester', 'Course', 'Shift', 'Section', 'ABC Id'];
+                for (const field of requiredFields) {
+                    if (!row[field]) {
+                        throw new Error(`Missing required field '${field}'`);
+                    }
+                }
+
+                // Validate email format
+                const email = String(row['Email']);
+                if (!isValidEmail(email)) {
+                    throw new Error(`Invalid email format: '${email}'`);
+                }
+
+                // Create student object
+                const studentData: Student = {
+                    name: String(row['Name']),
+                    uid: String(row['UID']),
+                    email: String(row['Email']),
+                    phone: String(row['Phone']),
+                    semester: String(row['Semester']),
+                    course: String(row['Course']),
+                    shift: validateShift(String(row['Shift']).toUpperCase()),
+                    section: String(row['Section']),
+                    registrationNumber: row['Reg. No.'] ? String(row['Reg. No.']) : undefined,
+                    rollNumber: row['Roll No.'] ? String(row['Roll No.']) : undefined,
+                    abcId: String(row['ABC Id'])
+                };
+
+                // Create student in database
+                const newStudent = await createStudent(studentData);
+
+                if (newStudent) {
+                    results.successful++;
+                } else {
+                    results.failed++;
+                    results.errors.push(`Row ${rowNum}: Duplicate student UID '${studentData.uid}'`);
+                }
+            } catch (error) {
+                results.failed++;
+                results.errors.push(`Row ${rowNum}: ${(error as Error).message}`);
+            }
         }
-
-        // Send notification email
-        await sendEmail(
-            student.email,
-            'ABC ID Verification Queued',
-            `
-            <h1>Your ABC ID verification has been queued</h1>
-            <p>Hello ${student.name},</p>
-            <p>Your ABC ID verification request has been received and is now in the queue for review.</p>
-            <p>You will be notified once your ID is approved by the administrators.</p>
-            <p>Thank you for your patience.</p>
-            `
-        );
 
         return NextResponse.json({
             success: true,
-            message: 'File uploaded successfully and verification queued',
-            fileName: fileInfo.fileName
+            message: 'Students processed successfully',
+            data: results
         });
     } catch (error) {
-        console.error('Error uploading file:', error);
+        console.error('Error processing student upload:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { success: false, message: 'Failed to process student upload' },
             { status: 500 }
         );
     }
+}
+
+// Function to validate shift values
+function validateShift(shiftValue: string): "DAY" | "MORNING" | "AFTERNOON" | "EVENING" {
+    const validShifts = ["DAY", "MORNING", "AFTERNOON", "EVENING"];
+    if (validShifts.includes(shiftValue)) {
+        return shiftValue as "DAY" | "MORNING" | "AFTERNOON" | "EVENING";
+    }
+    throw new Error(`Invalid Shift value '${shiftValue}'. Valid values are: ${validShifts.join(", ")}`);
+}
+
+// Function to validate email format
+function isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
 } 

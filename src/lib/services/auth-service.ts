@@ -49,33 +49,40 @@ export function generateTokens(user: User | Student): AuthTokens {
         name: user.name,
     };
 
-    // @ts-expect-error TypeScript and jsonwebtoken type mismatch
-    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
+    // Create proper JWT tokens with the jsonwebtoken library
+    // @ts-expect-error - ignore type issues with jwt library
+    const accessToken = jwt.sign(payload, JWT_SECRET, {
+        expiresIn: ACCESS_TOKEN_EXPIRY
+    });
 
-    // @ts-expect-error TypeScript and jsonwebtoken type mismatch
-    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
+    // @ts-expect-error - ignore type issues with jwt library
+    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
+        expiresIn: REFRESH_TOKEN_EXPIRY
+    });
 
     return { accessToken, refreshToken };
 }
 
 // Verify JWT access token
-export function verifyAccessToken(token: string): TokenPayload | null {
+export const verifyAccessToken = async (token: string) => {
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
-        return decoded;
+        if (!token) return null;
+        const verified = jwt.verify(token, JWT_SECRET) as TokenPayload;
+        return verified;
     } catch (error) {
-        console.log(error)
+        console.log("Error verifying access token:", error);
         return null;
     }
 }
 
 // Verify JWT refresh token
-export function verifyRefreshToken(token: string): TokenPayload | null {
+export const verifyRefreshToken = async (token: string) => {
     try {
-        const decoded = jwt.verify(token, JWT_REFRESH_SECRET) as TokenPayload;
-        return decoded;
+        if (!token) return null;
+        const verified = jwt.verify(token, JWT_REFRESH_SECRET) as TokenPayload;
+        return verified;
     } catch (error) {
-        console.log(error)
+        console.log("Error verifying refresh token:", error);
         return null;
     }
 }
@@ -138,7 +145,7 @@ export async function getUserByUid(uid: string): Promise<Student | null> {
 
 // Refresh access token using refresh token
 export async function refreshAccessToken(refreshToken: string): Promise<string | null> {
-    const payload = verifyRefreshToken(refreshToken);
+    const payload = await verifyRefreshToken(refreshToken);
     if (!payload) return null;
 
     const user = await getUserByEmail(payload.email);

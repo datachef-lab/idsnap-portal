@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-
-import { SignJWT } from "jose";
-import { getUserByEmail, verifyRefreshToken } from "@/lib/services/auth-service";
+import { getUserByEmail, verifyRefreshToken, generateTokens } from "@/lib/services/auth-service";
 
 export async function GET() {
     try {
         // Get the refresh token from cookies
         const cookieStore = await cookies();
         const refreshToken = cookieStore.get("refreshToken")?.value;
+
+        console.log("ME endpoint - Cookie check:", {
+            refreshToken: refreshToken ? "present" : "missing"
+        });
 
         if (!refreshToken) {
             return NextResponse.json(
@@ -18,13 +20,27 @@ export async function GET() {
         }
 
         // Verify the refresh token
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
         const payload = await verifyRefreshToken(refreshToken);
-        console.log("in refresh, payload:", payload);
-        const email = payload?.email as string;
+        console.log("ME endpoint - Token payload:", payload);
+
+        // If payload is null, the token is invalid
+        if (!payload || !payload.email) {
+            // Clear the invalid token
+            cookieStore.delete("refreshToken");
+            cookieStore.delete("uid");
+            cookieStore.delete("userType");
+
+            return NextResponse.json(
+                { error: "Invalid refresh token" },
+                { status: 401 }
+            );
+        }
+
+        const email = payload.email;
 
         // Get user details
         const user = await getUserByEmail(email);
+        console.log("ME endpoint - User:", user);
         if (!user) {
             return NextResponse.json(
                 { error: "User not found" },
@@ -32,13 +48,10 @@ export async function GET() {
             );
         }
 
-        // Generate new access token
-        const accessToken = await new SignJWT({ userId: user.id })
-            .setProtectedHeader({ alg: "HS256" })
-            .setIssuedAt()
-            .setExpirationTime("1h")
-            .sign(secret);
+        // Generate new tokens using our consistent method
+        const { accessToken } = generateTokens(user);
 
+        // Return user data and token
         return NextResponse.json({
             accessToken,
             user,

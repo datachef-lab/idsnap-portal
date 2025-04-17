@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2 } from "lucide-react";
+import { Mail, Shield } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -76,28 +76,33 @@ export default function Home() {
         throw new Error(data.message || "Failed to verify OTP");
       }
 
-      // Navigate to the redirect URL provided by the API
-      router.push(data.data.redirectUrl);
+      // Handle successful verification
+      if (data.data) {
+        const { accessToken, refreshToken, uid, userType, redirectUrl } =
+          data.data;
+
+        // Store tokens and user info in localStorage for client-side access
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+        localStorage.setItem("uid", uid || "");
+        localStorage.setItem("userType", userType);
+
+        // Set cookies for middleware
+        document.cookie = `refreshToken=${refreshToken}; path=/;`;
+        document.cookie = `uid=${uid}; path=/;`;
+        document.cookie = `userType=${userType}; path=/;`;
+
+        console.log("OTP verification successful");
+        console.log("Redirecting to", redirectUrl);
+
+        // Navigate to the redirect URL provided by the API
+        router.push(redirectUrl);
+      }
     } catch (error) {
       setError((error as Error).message || "Something went wrong");
     } finally {
       setLoading(false);
     }
-  };
-
-  // Function to clear browser data
-  const clearAllData = () => {
-    // Clear cookies
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i];
-      const eqPos = cookie.indexOf("=");
-      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-    }
-
-    // Reload the page to ensure a clean state
-    window.location.reload();
   };
 
   // Update timer every second
@@ -127,117 +132,148 @@ export default function Home() {
   }, [expiresAt]);
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-indigo-400 to-purple-500">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-2 text-white">IDSnap Portal</h1>
-        <p className="text-indigo-100 text-lg">ABC ID Verification System</p>
+    <main className="min-h-screen flex flex-col items-center bg-gradient-to-b from-indigo-400 via-violet-500 to-purple-600">
+      {/* Header at top */}
+      <div className="w-full text-center py-8">
+        <h2 className="text-lg font-medium text-white/90">
+          The Bhawanipur Education Society College
+        </h2>
       </div>
 
-      <div className="bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-lg max-w-md w-full">
-        {!otpSent ? (
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-700">
-                Email Address
-              </label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                required
-                className="w-full"
-              />
-            </div>
-
-            {error && (
-              <div className="p-2 bg-red-50 text-red-600 rounded text-sm">
-                {error}
+      {/* Form in center */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full px-4">
+        <div className="w-full text-center py-8">
+          <h1 className="text-5xl font-bold mt-2 mb-2 text-white">
+            IDSnap Portal
+          </h1>
+          <p className="text-white/90 text-lg">ABC ID Verification System</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-auto">
+          {!otpSent ? (
+            <div className="p-6">
+              <div className="flex justify-center mb-5">
+                <div className="p-3 rounded-full bg-indigo-100">
+                  <Mail className="h-6 w-6 text-indigo-600" />
+                </div>
               </div>
-            )}
 
-            <Button
-              type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700"
-              disabled={loading}
-            >
-              {loading ? "Sending..." : "Send OTP"}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-700">
-                Enter OTP
-              </label>
-              <Input
-                id="otp-input"
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="Enter the 6-digit OTP"
-                required
-                maxLength={6}
-                className="w-full text-center tracking-widest text-lg"
-              />
-              {remainingTime && (
-                <p className="text-xs text-gray-500 mt-1 text-center">
-                  OTP expires in {remainingTime}
-                </p>
-              )}
+              <p className="text-center text-gray-600 text-sm mb-6">
+                Verify your email to continue with ABC ID verification
+              </p>
+
+              <form onSubmit={handleSendOtp} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">
+                    Email Address
+                  </label>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    required
+                    className="w-full"
+                  />
+                </div>
+
+                {error && (
+                  <div className="p-2 bg-red-50 text-red-600 rounded text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2"
+                  disabled={loading}
+                >
+                  {loading ? "Sending..." : "Send OTP"}
+                </Button>
+              </form>
             </div>
-
-            {error && (
-              <div className="p-2 bg-red-50 text-red-600 rounded text-sm">
-                {error}
+          ) : (
+            <div className="p-6">
+              <div className="flex justify-center mb-5">
+                <div className="p-3 rounded-full bg-indigo-100">
+                  <Shield className="h-6 w-6 text-indigo-600" />
+                </div>
               </div>
-            )}
 
-            <div className="flex space-x-2">
-              <Button
-                type="button"
-                className="w-1/3 bg-gray-200 hover:bg-gray-300 text-gray-700"
-                disabled={loading}
-                onClick={() => setOtpSent(false)}
-              >
-                Back
-              </Button>
-              <Button
-                type="submit"
-                className="w-2/3 bg-indigo-600 hover:bg-indigo-700"
-                disabled={loading}
-              >
-                {loading ? "Verifying..." : "Verify OTP"}
-              </Button>
+              <h3 className="text-xl font-semibold text-center mb-2">
+                Verify Your Account
+              </h3>
+              <p className="text-center text-gray-600 text-sm mb-6">
+                Enter the OTP sent to your email address
+              </p>
+
+              <form onSubmit={handleVerifyOtp} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">
+                    Enter OTP
+                  </label>
+                  <Input
+                    id="otp-input"
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="Enter the 6-digit OTP"
+                    required
+                    maxLength={6}
+                    className="w-full text-center tracking-widest text-lg"
+                  />
+                  {remainingTime && (
+                    <p className="text-xs text-gray-500 mt-1 text-center">
+                      OTP expires in {remainingTime}
+                    </p>
+                  )}
+                </div>
+
+                {error && (
+                  <div className="p-2 bg-red-50 text-red-600 rounded text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex space-x-2 pt-2">
+                  <Button
+                    type="button"
+                    className="w-1/3 bg-gray-200 hover:bg-gray-300 text-gray-700"
+                    disabled={loading}
+                    onClick={() => setOtpSent(false)}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white"
+                    disabled={loading}
+                  >
+                    {loading ? "Verifying..." : "Verify OTP"}
+                  </Button>
+                </div>
+
+                <div className="text-center text-sm text-gray-500">
+                  <button
+                    type="button"
+                    className="text-indigo-600 hover:text-indigo-800"
+                    onClick={handleSendOtp}
+                    disabled={loading}
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </form>
             </div>
-
-            <div className="text-center text-sm text-gray-500">
-              <button
-                type="button"
-                className="text-indigo-600 hover:text-indigo-800"
-                onClick={handleSendOtp}
-                disabled={loading}
-              >
-                Resend OTP
-              </button>
-            </div>
-          </form>
-        )}
-
-        <div className="mt-8 pt-4 border-t border-indigo-100 text-center">
-          <p className="text-sm text-gray-500 mb-2">
-            Having trouble logging in?
-          </p>
-          <Button
-            variant="outline"
-            onClick={clearAllData}
-            className="text-sm text-red-500 border-red-200 hover:bg-red-50"
-          >
-            <Trash2 size={14} className="mr-1" />
-            Clear Browser Data
-          </Button>
+          )}
         </div>
       </div>
+
+      <footer className="w-full text-center py-6">
+        <p className="text-white text-sm">
+          © {new Date().getFullYear()} The Bhawanipur Education Society College.
+          All rights reserved.
+        </p>
+      </footer>
     </main>
   );
 }

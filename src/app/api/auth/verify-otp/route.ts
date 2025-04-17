@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { otpStore } from '@/lib/store/otp-store';
 import { verifyOtp } from '@/lib/services/otp-service';
-import { getUserByEmail } from '@/lib/services/auth-service';
-import { Student, User } from '@/lib/db/schema';
+import { getUserByEmail, generateTokens } from '@/lib/services/auth-service';
+import { Student, studentTable, User } from '@/lib/db/schema';
+import db from '@/lib/db';
+import { eq } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
     try {
@@ -48,12 +50,15 @@ export async function POST(request: NextRequest) {
 
             // Determine if user is student type (has uid property)
             const isStudent = 'uid' in user;
+            await db.update(studentTable)
+                .set({ checkedAt: new Date() })
+                .where(eq(studentTable.email, email as string));
+
             // Determine redirect URL based on user type
             const redirectUrl = isStudent ? `/${(user as Student).uid}` : '/home';
 
-            // Generate auth tokens
-            const accessToken = generateToken();
-            const refreshToken = generateToken();
+            // Generate auth tokens using the proper JWT function
+            const { accessToken, refreshToken } = generateTokens(user);
 
             // Determine user type based on email
             const userType = isStudent ? "student" : "admin";
@@ -75,7 +80,7 @@ export async function POST(request: NextRequest) {
             response.cookies.set('refreshToken', refreshToken, {
                 path: '/',
                 httpOnly: true,
-                sameSite: false,
+                sameSite: 'lax',
                 maxAge: 30 * 24 * 60 * 60, // 30 days
             });
 
@@ -83,14 +88,14 @@ export async function POST(request: NextRequest) {
             response.cookies.set('uid', isStudent ? (user as Student).uid : 'admin-user', {
                 path: '/',
                 httpOnly: true,
-                sameSite: false,
+                sameSite: 'lax',
                 maxAge: 30 * 24 * 60 * 60, // 30 days
             });
 
             response.cookies.set('userType', userType, {
                 path: '/',
                 httpOnly: true,
-                sameSite: false,
+                sameSite: 'lax',
                 maxAge: 30 * 24 * 60 * 60, // 30 days
             });
 
@@ -130,19 +135,30 @@ export async function POST(request: NextRequest) {
         // OTP is valid, clean it up
         delete otpStore[email];
 
-        // Generate UID based on email (for demo purposes)
-        // In a real app, you would get this from your database
-        const uid = `ST${Math.floor(10000 + Math.random() * 90000)}`;
+        // Create a dummy user for this demo scenario
+        // Normally, you'd retrieve or create a real user in your database
+        const dummyUser: User | Student = {
+            id: 999,
+            name: email.split('@')[0],
+            email: email,
+            uid: `ST${Math.floor(10000 + Math.random() * 90000)}`,
+            phone: '',
+            semester: '1',
+            course: 'Computer Science',
+            shift: 'DAY',
+            section: 'A',
+            abcId: 'ABC123456'
+        };
 
-        // Generate auth tokens
-        const accessToken = generateToken();
-        const refreshToken = generateToken();
+        // Generate auth tokens using the proper JWT function
+        const { accessToken, refreshToken } = generateTokens(dummyUser);
 
-        // Determine user type based on email
-        const userType = "uid" in user! ? "student" : "admin";
+        // Determine user type based on presence of uid property
+        const userType = "student";
+        const uid = dummyUser.uid;
 
         // Determine redirect URL based on user type
-        const redirectUrl = userType === "student" ? `/${uid}` : "/home";
+        const redirectUrl = `/${uid}`;
 
         // Create response with cookies
         const response = NextResponse.json({
@@ -161,22 +177,22 @@ export async function POST(request: NextRequest) {
         response.cookies.set('refreshToken', refreshToken, {
             path: '/',
             httpOnly: true,
-            sameSite: false,
+            sameSite: 'lax',
             maxAge: 30 * 24 * 60 * 60, // 30 days
         });
 
-        // For admin users, set a uid that won't match a URL path
-        response.cookies.set('uid', userType === "student" ? uid : 'admin-user', {
+        // Set user's uid in the cookie
+        response.cookies.set('uid', uid, {
             path: '/',
             httpOnly: true,
-            sameSite: false,
+            sameSite: 'lax',
             maxAge: 30 * 24 * 60 * 60, // 30 days
         });
 
         response.cookies.set('userType', userType, {
             path: '/',
             httpOnly: true,
-            sameSite: false,
+            sameSite: 'lax',
             maxAge: 30 * 24 * 60 * 60, // 30 days
         });
 
@@ -188,10 +204,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
-
-// Function to generate a random token (simplified for demo)
-function generateToken() {
-    return Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15);
 } 

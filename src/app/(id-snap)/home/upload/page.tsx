@@ -5,8 +5,23 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Upload, File, CheckCircle, XCircle } from "lucide-react";
+import {
+  Upload,
+  File,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Trash2,
+} from "lucide-react";
 import Cookies from "js-cookie";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function UploadStudentDataPage() {
   const router = useRouter();
@@ -27,17 +42,15 @@ export default function UploadStudentDataPage() {
     failed: 0,
     errors: [],
   });
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<{
+    status: "success" | "error";
+    message: string;
+  } | null>(null);
 
   // Check authentication and redirect if not logged in
   useEffect(() => {
-    const token = Cookies.get("refreshToken");
-
-    // Redirect if not logged in
-    if (!token) {
-      router.push("/");
-      return;
-    }
-
     setLoading(false);
   }, [router]);
 
@@ -55,34 +68,45 @@ export default function UploadStudentDataPage() {
     setUploadStatus("uploading");
     setProgress(0);
 
-    // Simulate file upload with progress
+    // Create form data to send to the API
+    const formData = new FormData();
+    formData.append("file", file);
+
+    // Simulate upload progress
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
+        if (prev >= 95) {
           clearInterval(interval);
-          return 100;
+          return 95;
         }
-        return prev + 10;
+        return prev + 5;
       });
-    }, 300);
+    }, 200);
 
     try {
-      // Simulate API call for file processing
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      // Simulate successful upload
-      setResults({
-        total: 50,
-        successful: 45,
-        failed: 5,
-        errors: [
-          "Row 12: Invalid email format",
-          "Row 18: Missing required field 'ABC ID'",
-          "Row 23: Duplicate student UID",
-          "Row 37: Invalid semester value",
-          "Row 42: Missing required field 'Phone'",
-        ],
+      // Call the API to upload and process the file
+      const response = await fetch("/api/students/upload", {
+        method: "POST",
+        body: formData,
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to upload students");
+      }
+
+      // Set progress to 100% when complete
+      setProgress(100);
+
+      // Set results from the API response
+      setResults({
+        total: data.data.total,
+        successful: data.data.successful,
+        failed: data.data.failed,
+        errors: data.data.errors,
+      });
+
       setUploadStatus("success");
     } catch (error) {
       console.error("Error uploading file:", error);
@@ -93,17 +117,64 @@ export default function UploadStudentDataPage() {
     }
   };
 
+  const handleResetStudentData = async () => {
+    setResetting(true);
+    setResetResult(null);
+
+    try {
+      const response = await fetch("/api/admin/reset", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to reset student data");
+      }
+
+      setResetResult({
+        status: "success",
+        message: data.message || "Student data has been reset successfully",
+      });
+    } catch (error) {
+      console.error("Error resetting student data:", error);
+      setResetResult({
+        status: "error",
+        message: (error as Error).message || "Failed to reset student data",
+      });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const handleNavigateToHome = () => {
     router.push("/home");
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("uid");
-    Cookies.remove("refreshToken");
-    Cookies.remove("uid");
-    router.push("/");
+  const handleLogout = async () => {
+    try {
+      // Call the server-side logout API
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      // Clear client-side storage
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("uid");
+
+      // Clear cookies
+      Cookies.remove("refreshToken");
+      Cookies.remove("uid");
+      Cookies.remove("userType");
+
+      // Redirect to logout page
+      window.location.href = "/logout";
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Fallback
+      window.location.href = "/logout";
+    }
   };
 
   if (loading) {
@@ -130,19 +201,29 @@ export default function UploadStudentDataPage() {
           <h1 className="text-3xl font-bold text-indigo-700">
             Bulk Upload Students
           </h1>
-          <Button
-            variant="outline"
-            onClick={handleNavigateToHome}
-            className="bg-white/70 text-indigo-700 hover:bg-white hover:text-indigo-800 border-indigo-300"
-          >
-            Back to Dashboard
-          </Button>
+          <div className="flex space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => setResetDialogOpen(true)}
+              className="bg-white/70 text-red-700 hover:bg-red-50 hover:text-red-800 border-red-300"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Reset Student Data
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleNavigateToHome}
+              className="bg-white/70 text-indigo-700 hover:bg-white hover:text-indigo-800 border-indigo-300"
+            >
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
 
         <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-md">
           <CardHeader className="border-b border-indigo-100">
             <CardTitle className="text-indigo-700">
-              Upload Student CSV File
+              Upload Student Excel File
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
@@ -201,7 +282,7 @@ export default function UploadStudentDataPage() {
             ) : (
               <div className="space-y-4">
                 <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center ${
+                  className={`relative border-2 border-dashed rounded-lg p-8 text-center ${
                     file ? "border-indigo-400" : "border-indigo-200"
                   }`}
                 >
@@ -214,9 +295,24 @@ export default function UploadStudentDataPage() {
                       <p className="font-medium text-lg mb-1 text-indigo-700">
                         {file.name}
                       </p>
-                      <p className="text-sm text-indigo-500">
+                      <p className="text-sm text-indigo-500 mb-3">
                         {(file.size / 1024).toFixed(2)} KB
                       </p>
+                      <label
+                        htmlFor="file-upload-change"
+                        className="cursor-pointer"
+                      >
+                        <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-md text-xs hover:bg-indigo-200 transition-colors">
+                          Change File
+                        </span>
+                        <input
+                          id="file-upload-change"
+                          type="file"
+                          accept=".xlsx,.xls"
+                          onChange={handleFileChange}
+                          className="sr-only"
+                        />
+                      </label>
                     </div>
                   ) : (
                     <div className="py-4">
@@ -228,16 +324,25 @@ export default function UploadStudentDataPage() {
                         Click or drag file to upload
                       </p>
                       <p className="text-xs text-indigo-400">
-                        Upload CSV file with student data
+                        Upload Excel file with student data
                       </p>
+                      <label
+                        htmlFor="file-upload"
+                        className="mt-4 inline-block cursor-pointer"
+                      >
+                        <span className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md text-sm hover:bg-indigo-200 transition-colors">
+                          Select Excel File
+                        </span>
+                        <input
+                          id="file-upload"
+                          type="file"
+                          accept=".xlsx,.xls"
+                          onChange={handleFileChange}
+                          className="sr-only"
+                        />
+                      </label>
                     </div>
                   )}
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
                 </div>
 
                 {uploadStatus === "uploading" && (
@@ -270,33 +375,210 @@ export default function UploadStudentDataPage() {
 
         <div className="bg-indigo-50/80 backdrop-blur-sm p-6 rounded-xl shadow-md border border-indigo-100">
           <h3 className="text-xl font-medium mb-3 text-indigo-700">
-            CSV Format Requirements
+            Excel Format Requirements
           </h3>
           <p className="mb-3 text-indigo-600">
-            The CSV file should include the following columns:
+            The Excel file should include the following columns:
           </p>
-          <ul className="list-disc pl-5 space-y-1 text-indigo-700">
-            <li>Name (required)</li>
-            <li>Email (required)</li>
-            <li>Phone (required)</li>
-            <li>UID (required, must be unique)</li>
-            <li>ABC ID (required)</li>
-            <li>Semester (required)</li>
-            <li>Course (required)</li>
-            <li>Section (required)</li>
-            <li>Registration Number (optional)</li>
-            <li>Roll Number (optional)</li>
-          </ul>
-          <p className="mt-3 text-sm">
-            <a
-              href="#"
-              className="text-indigo-600 hover:text-indigo-800 hover:underline"
-            >
-              Download a sample template
-            </a>
-          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+            <div className="space-y-1">
+              <h4 className="font-medium text-indigo-800 mt-2">
+                Required Fields:
+              </h4>
+              <ul className="list-disc pl-5 space-y-1 text-indigo-700">
+                <li>
+                  Name{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Full name of the student)
+                  </span>
+                </li>
+                <li>
+                  UID{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Unique ID, must be unique, format: ST12345)
+                  </span>
+                </li>
+                <li>
+                  Email{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Valid email address)
+                  </span>
+                </li>
+                <li>
+                  Phone{" "}
+                  <span className="text-xs text-indigo-500">
+                    (10-digit number)
+                  </span>
+                </li>
+                <li>
+                  Semester{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Current semester number)
+                  </span>
+                </li>
+                <li>
+                  Course{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Full course name, e.g., &ldquo;B.Tech Computer
+                    Science&rdquo;)
+                  </span>
+                </li>
+                <li>
+                  Shift{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Only: DAY, MORNING, AFTERNOON, EVENING)
+                  </span>
+                </li>
+                <li>
+                  Section{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Class section, e.g., &ldquo;A&rdquo;, &ldquo;B&rdquo;)
+                  </span>
+                </li>
+                <li>
+                  ABC Id{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Academic Bank of Credits ID)
+                  </span>
+                </li>
+              </ul>
+            </div>
+            <div className="space-y-1">
+              <h4 className="font-medium text-indigo-800 mt-2">
+                Optional Fields:
+              </h4>
+              <ul className="list-disc pl-5 space-y-1 text-indigo-700">
+                <li>
+                  Reg. No.{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Registration number if available)
+                  </span>
+                </li>
+                <li>
+                  Roll No.{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Roll number if available)
+                  </span>
+                </li>
+              </ul>
+
+              <h4 className="font-medium text-indigo-800 mt-4">
+                Download Template:
+              </h4>
+              <p className="text-indigo-600 mt-1">
+                Download our pre-formatted Excel template with sample data to
+                ensure your data follows the correct format.
+              </p>
+              <a
+                href="/templates/student-upload-template.xlsx"
+                download
+                className="inline-block mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors duration-200"
+              >
+                Download Template
+              </a>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-100 rounded-md">
+            <h4 className="font-medium text-yellow-700">Important Notes:</h4>
+            <ul className="list-disc pl-5 mt-1 text-sm text-yellow-700">
+              <li>
+                The first row must contain the column headers exactly as
+                specified above.
+              </li>
+              <li>UID must be unique for each student.</li>
+              <li>All required fields must be filled for each row.</li>
+              <li>
+                Shift values must be one of: DAY, MORNING, AFTERNOON, EVENING
+                (case insensitive).
+              </li>
+            </ul>
+          </div>
         </div>
       </main>
+
+      {/* Confirmation Dialog for Reset */}
+      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center">
+              <AlertTriangle className="mr-2 h-5 w-5" />
+              Reset Student Data
+            </DialogTitle>
+            <DialogDescription className="pt-4">
+              {resetResult ? (
+                <div
+                  className={`p-4 rounded-lg ${
+                    resetResult.status === "success"
+                      ? "bg-green-50 text-green-700"
+                      : "bg-red-50 text-red-700"
+                  }`}
+                >
+                  {resetResult.status === "success" ? (
+                    <div className="flex items-center">
+                      <CheckCircle className="text-green-500 mr-2" size={20} />
+                      <span>{resetResult.message}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <XCircle className="text-red-500 mr-2" size={20} />
+                      <span>{resetResult.message}</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <p className="text-red-500 font-medium">
+                    Warning: This action cannot be undone!
+                  </p>
+                  <p className="mt-2">
+                    This will permanently delete all student records and
+                    verification images from the database.
+                  </p>
+                  <p className="mt-2">
+                    Are you sure you want to reset all student data?
+                  </p>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {!resetResult && (
+            <DialogFooter className="flex space-x-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setResetDialogOpen(false)}
+                disabled={resetting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleResetStudentData}
+                disabled={resetting}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {resetting ? "Resetting..." : "Yes, Reset All Data"}
+              </Button>
+            </DialogFooter>
+          )}
+          {resetResult && (
+            <DialogFooter>
+              <Button
+                onClick={() => {
+                  setResetDialogOpen(false);
+                  setResetResult(null);
+                  if (resetResult.status === "success") {
+                    // Refresh the page if reset was successful
+                    window.location.reload();
+                  }
+                }}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

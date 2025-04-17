@@ -16,6 +16,7 @@ export async function createStudent(student: Student) {
         email: student.email.trim(),
         phone: student.phone.trim(),
         uid: student.uid.trim(),
+        shift: student.shift?.trim().toUpperCase() as "DAY" | "MORNING" | "AFTERNOON" | "EVENING",
         semester: student.semester.trim(),
         course: student.course.trim(),
         section: student.section.trim(),
@@ -23,7 +24,7 @@ export async function createStudent(student: Student) {
         rollNumber: student.rollNumber?.trim(),
         abcId: student.abcId.trim(),
     };
-    const [newStudent] = 
+    const [newStudent] =
         await db.insert(studentTable)
             .values(trimmedStudent)
             .returning();
@@ -32,25 +33,29 @@ export async function createStudent(student: Student) {
 }
 
 export async function getStudentByUid(uid: string) {
-    const [foundStudent] = 
+    const [foundStudent] =
         await db.select()
             .from(studentTable)
             .where(eq(studentTable.uid, uid.trim()));
     return foundStudent;
 }
 
-export async function getStudentByEmail(email: string): Promise<Student | null> {
-    const [foundStudent] = 
+export async function getStudentByEmail(email: string | null | undefined): Promise<Student | null> {
+    // If email is undefined or null, return null
+    if (!email) {
+        return null;
+    }
+
+    const [foundStudent] =
         await db.select()
             .from(studentTable)
             .where(eq(studentTable.email, email.trim()));
-
 
     return foundStudent;
 }
 
 export async function getStudentById(id: number) {
-    const [foundStudent] = 
+    const [foundStudent] =
         await db.select()
             .from(studentTable)
             .where(eq(studentTable.id, id));
@@ -63,7 +68,7 @@ export async function getStudents() {
 }
 
 export async function updateStudent(student: Student) {
-    const [updatedStudent] = 
+    const [updatedStudent] =
         await db.update(studentTable)
             .set(student)
             .where(eq(studentTable.id, student.id as number))
