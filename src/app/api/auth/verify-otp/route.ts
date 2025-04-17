@@ -1,21 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { otpStore } from '@/lib/store/otp-store';
 import { verifyOtp } from '@/lib/services/otp-service';
-import { getUserByEmail, generateTokens } from '@/lib/services/auth-service';
+import { generateTokens } from '@/lib/services/auth-service';
 import { Student, studentTable, User } from '@/lib/db/schema';
 import db from '@/lib/db';
 import { eq } from 'drizzle-orm';
+import { getUserByEmail } from '@/lib/services/user-service';
+import { getStudentByUid } from '@/lib/services/student-service';
 
 export async function POST(request: NextRequest) {
     try {
         // Get email and OTP from request body
         const body = await request.json();
-        const { email, otp } = body;
+        const { username, otp } = body;
 
         let user: User | Student | null = null;
 
+        user = await getUserByEmail(username);
+
+        if (!user) {
+            user = await getStudentByUid(`ST${username.trim()}`);
+        }
+
+    
+
         // Validate input
-        if (!email || !otp) {
+        if (!username || !otp) {
             return NextResponse.json(
                 { success: false, message: 'Email and OTP are required' },
                 { status: 400 }
@@ -23,7 +33,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if OTP exists and is valid using the service
-        const otpData = await verifyOtp(email, otp);
+        const otpData = await verifyOtp(user.email, otp);
         if (otpData === -1) {
             return NextResponse.json(
                 { success: false, message: 'OTP expired' },
@@ -40,7 +50,6 @@ export async function POST(request: NextRequest) {
 
         // If OTP is valid from the service
         if (otpData === 1) {
-            user = await getUserByEmail(email);
             if (!user) {
                 return NextResponse.json(
                     { success: false, message: 'User not found' },
@@ -52,7 +61,7 @@ export async function POST(request: NextRequest) {
             const isStudent = 'uid' in user;
             await db.update(studentTable)
                 .set({ checkedAt: new Date() })
-                .where(eq(studentTable.email, email as string));
+                .where(eq(studentTable.email, user.email as string));
 
             // Determine redirect URL based on user type
             const redirectUrl = isStudent ? `/${(user as Student).uid}` : '/home';
@@ -103,7 +112,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Fallback to in-memory OTP store if service validation didn't succeed
-        const storedData = otpStore[email];
+        const storedData = otpStore[user.email];
         if (!storedData) {
             return NextResponse.json(
                 { success: false, message: 'No OTP found for this email' },
@@ -114,7 +123,7 @@ export async function POST(request: NextRequest) {
         // Check if OTP is expired
         if (Date.now() > storedData.expiresAt) {
             // Clean up expired OTP
-            delete otpStore[email];
+            delete otpStore[user.email];
             return NextResponse.json(
                 { success: false, message: 'OTP has expired' },
                 { status: 400 }
@@ -133,14 +142,14 @@ export async function POST(request: NextRequest) {
         }
 
         // OTP is valid, clean it up
-        delete otpStore[email];
+        delete otpStore[user.email];
 
         // Create a dummy user for this demo scenario
         // Normally, you'd retrieve or create a real user in your database
         const dummyUser: User | Student = {
             id: 999,
-            name: email.split('@')[0],
-            email: email,
+            name: user.email.split('@')[0],
+            email: user.email,
             uid: `ST${Math.floor(10000 + Math.random() * 90000)}`,
             phone: '',
             semester: '1',

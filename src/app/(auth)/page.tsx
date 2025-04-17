@@ -8,7 +8,7 @@ import { Mail, Shield } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState("");
@@ -29,7 +29,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ username }),
       });
 
       const data = await response.json();
@@ -67,7 +67,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ username, otp }),
       });
 
       const data = await response.json();
@@ -158,19 +158,19 @@ export default function Home() {
               </div>
 
               <p className="text-center text-gray-600 text-sm mb-6">
-                Verify your email to continue with ABC ID verification
+                Verify your username to continue with ABC ID verification
               </p>
 
               <form onSubmit={handleSendOtp} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1 text-gray-700">
-                    Email Address
+                    Enter your 10-digit UID
                   </label>
                   <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    type="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter your username"
                     required
                     className="w-full"
                   />
@@ -203,7 +203,7 @@ export default function Home() {
                 Verify Your Account
               </h3>
               <p className="text-center text-gray-600 text-sm mb-6">
-                Enter the OTP sent to your email address
+                Enter the OTP sent to your username address
               </p>
 
               <form onSubmit={handleVerifyOtp} className="space-y-4">

@@ -8,11 +8,12 @@ const nextConfig = {
             },
         ],
     },
-    // Add this to help with typechecking issues in Next.js 15
-    // Specify that we're using the new experimental typechecking
-    experimental: {
-        typedRoutes: true,
-    },
+    // Only apply these options during production build
+    ...(process.env.NODE_ENV === 'production' ? {
+        experimental: {
+            typedRoutes: true,
+        },
+    } : {}),
     typescript: {
         // For now, don't block the build because of TS errors
         ignoreBuildErrors: true,
