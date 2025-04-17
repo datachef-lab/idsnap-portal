@@ -24,6 +24,9 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
 
   // ABC ID management
   const [abcId, setAbcId] = useState<string>(student?.abcId || "");
+  const [originalAbcId, setOriginalAbcId] = useState<string>(
+    student?.abcId || ""
+  );
   const [isEditingAbcId, setIsEditingAbcId] = useState<boolean>(false);
 
   // File upload management
@@ -33,6 +36,7 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
   const [success, setSuccess] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abcIdInputRef = useRef<HTMLInputElement>(null);
 
   // Check if already verified
   const isVerified =
@@ -42,8 +46,19 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
   useEffect(() => {
     if (student?.abcId) {
       setAbcId(student.abcId);
+      setOriginalAbcId(student.abcId);
     }
   }, [student]);
+
+  // Focus the ABC ID input field when editing mode is enabled
+  useEffect(() => {
+    if (isEditingAbcId && abcIdInputRef.current) {
+      // Set a small timeout to ensure the input is rendered
+      setTimeout(() => {
+        abcIdInputRef.current?.focus();
+      }, 50);
+    }
+  }, [isEditingAbcId]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -114,6 +129,8 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
       setStep(2);
     } else {
       // If ABC ID is incorrect, enable editing
+      // Save current value as original before editing
+      setOriginalAbcId(abcId);
       setIsEditingAbcId(true);
     }
   };
@@ -245,27 +262,45 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
           {step === 1 && (
             <div>
               <div className="p-5 border border-indigo-100 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 mb-6 shadow-sm">
-                <p className="font-medium text-lg mb-2 text-indigo-700">
+                {/* <p className="font-medium text-lg mb-2 text-indigo-700">
                   Your ABC ID
-                </p>
+                </p> */}
                 {isEditingAbcId ? (
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="text"
-                      value={abcId}
-                      onChange={(e) => setAbcId(e.target.value)}
-                      className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
-                      placeholder="Enter your ABC ID"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="bg-indigo-600 hover:bg-indigo-700"
-                      onClick={handleContinueAfterEdit}
-                    >
-                      Save
-                    </Button>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <p className="text-gray-700 mb-2">
+                        Your earlier Appar Id (ABC Id) was:
+                      </p>
+                      <p className="font-mono font-medium text-black bg-white px-3 py-2 rounded border border-gray-200">
+                        {originalAbcId || "Not provided"}
+                      </p>
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="text-gray-700 mb-2">
+                        Enter correct Apaar Id(ABC ID):
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={abcId}
+                          onChange={(e) => setAbcId(e.target.value)}
+                          className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder="Enter your ABC ID"
+                          autoFocus
+                          ref={abcIdInputRef}
+                          required
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="bg-indigo-600 hover:bg-indigo-700"
+                          onClick={handleContinueAfterEdit}
+                        >
+                          Continue
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-xl font-semibold text-indigo-600 bg-white px-3 py-2 rounded shadow-sm inline-block">

@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [router, pathname, isStudentRoute]);
 
   const generateNewToken = useCallback(async (): Promise<string | null> => {
-    if (!isProtectedRoute) return null; // ✅ Skip request if not on protected route
+    if (!isProtectedRoute) return null; // Skip if not on protected route
 
     try {
       const response = await axiosInstance.get<{
@@ -106,7 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
       return null;
     }
-  }, [isProtectedRoute]); // Removed logout from dependencies to break the cycle
+  }, [isProtectedRoute]); // Removed accessToken dependency
 
   useEffect(() => {
     if (!isProtectedRoute) {
@@ -160,7 +160,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [generateNewToken, isProtectedRoute, accessToken]);
 
   useEffect(() => {
-    if (!isProtectedRoute) return; // ✅ Skip request if not on protected route
+    if (!isProtectedRoute) return; // Skip if not on protected route
 
     // Set a maximum number of refresh attempts
     const MAX_REFRESH_ATTEMPTS = 1;
