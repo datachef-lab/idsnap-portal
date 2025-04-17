@@ -72,7 +72,7 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
       }
 
       // Check file size (max 5MB)
-      if (selectedFile.size > 5 * 1024 * 1024) {
+      if (selectedFile.size > 3 * 1024 * 1024) {
         setError("File size must be less than 5MB");
         return;
       }
@@ -445,7 +445,7 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
                         Click or drag file to upload
                       </p>
                       <p className="text-xs text-gray-500">
-                        JPG, JPEG or PNG (max. 5MB)
+                        JPG, JPEG or PNG (max. 3MB)
                       </p>
                     </div>
                   )}
