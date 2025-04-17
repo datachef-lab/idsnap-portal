@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
         // For testing purposes, generate a fixed OTP if the external service fails
         const otpValue = otp?.otp || Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Store OTP with 10-minute expiration
-        const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+        // Store OTP with 2-minute expiration
+        const expiresAt = Date.now() + 2 * 60 * 1000; // 2 minutes
         otpStore[user.email] = { otp: otpValue, expiresAt };
 
         // In a real app, you would send the OTP via email or SMS

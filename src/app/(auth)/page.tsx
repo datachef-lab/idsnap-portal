@@ -231,7 +231,7 @@ export default function Home() {
                   />
                   {remainingTime && (
                     <p className="text-xs text-gray-500 mt-1 text-center">
-                      OTP expires in {remainingTime}
+                      OTP expires in {remainingTime} (valid for 2 minutes)
                     </p>
                   )}
                 </div>
