@@ -252,7 +252,7 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
           {step === 1
             ? "Confirm Your ABC ID"
             : step === 2
-            ? "Upload Verification Image"
+            ? "Upload ID Screenshot"
             : "Submit Verification"}
         </CardTitle>
       </CardHeader>
@@ -349,9 +349,52 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
               </div>
 
               <div className="mb-6">
-                <p className="font-medium text-indigo-700 mb-3 text-center">
+                {/* <p className="font-medium text-indigo-700 mb-3 text-center">
                   Upload ID Screenshot
-                </p>
+                </p> */}
+
+                <div className="mb-5 rounded-lg overflow-hidden border border-gray-200">
+                  <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2">
+                    <p className="text-white font-medium">
+                      How to Upload Your ABC ID
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4">
+                    <div className="flex items-start mb-3 pb-3 border-b border-gray-100">
+                      <div className="bg-indigo-100 text-indigo-700 rounded-full h-6 w-6 flex items-center justify-center font-bold text-sm mr-3 mt-0.5 flex-shrink-0">
+                        1
+                      </div>
+                      <p className="text-gray-700 text-sm">
+                        Login to your{" "}
+                        <span className="font-medium">abc.gov.in</span> profile
+                        or <span className="font-medium">Digilocker</span>{" "}
+                        profile and take a proper screenshot of your ABC ID
+                        along with your name clearly visible.
+                      </p>
+                    </div>
+
+                    <div className="flex items-start mb-3 pb-3 border-b border-gray-100">
+                      <div className="bg-indigo-100 text-indigo-700 rounded-full h-6 w-6 flex items-center justify-center font-bold text-sm mr-3 mt-0.5 flex-shrink-0">
+                        2
+                      </div>
+                      <p className="text-gray-700 text-sm">
+                        Save the screenshot as a{" "}
+                        <span className="font-medium">.jpeg</span> file.
+                      </p>
+                    </div>
+
+                    <div className="flex items-start">
+                      <div className="bg-indigo-100 text-indigo-700 rounded-full h-6 w-6 flex items-center justify-center font-bold text-sm mr-3 mt-0.5 flex-shrink-0">
+                        3
+                      </div>
+                      <p className="text-gray-700 text-sm">
+                        Upload the correct screenshot, ensuring it&apos;s clear
+                        and visible.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Hidden file input */}
                 <input
