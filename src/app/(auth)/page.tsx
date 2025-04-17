@@ -170,7 +170,7 @@ export default function Home() {
                     type="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter your username"
+                    placeholder="Enter your UID"
                     required
                     className="w-full"
                   />
