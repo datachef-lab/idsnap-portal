@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
             response.cookies.set('refreshToken', refreshToken, {
                 path: '/',
                 httpOnly: true,
+                secure: false,
                 sameSite: 'lax',
                 maxAge: 30 * 24 * 60 * 60, // 30 days
             });
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
             response.cookies.set('uid', isStudent ? (user as Student).uid : 'admin-user', {
                 path: '/',
                 httpOnly: true,
+                secure: false,
                 sameSite: 'lax',
                 maxAge: 30 * 24 * 60 * 60, // 30 days
             });
@@ -105,6 +107,7 @@ export async function POST(request: NextRequest) {
                 path: '/',
                 httpOnly: true,
                 sameSite: 'lax',
+                secure: false,
                 maxAge: 30 * 24 * 60 * 60, // 30 days
             });
 
@@ -194,7 +197,9 @@ export async function POST(request: NextRequest) {
         response.cookies.set('uid', uid, {
             path: '/',
             httpOnly: true,
+            secure: false,
             sameSite: 'lax',
+            
             maxAge: 30 * 24 * 60 * 60, // 30 days
         });
 
@@ -202,6 +207,7 @@ export async function POST(request: NextRequest) {
             path: '/',
             httpOnly: true,
             sameSite: 'lax',
+            secure: false,
             maxAge: 30 * 24 * 60 * 60, // 30 days
         });
 
