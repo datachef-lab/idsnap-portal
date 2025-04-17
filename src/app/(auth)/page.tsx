@@ -158,7 +158,7 @@ export default function Home() {
               </div>
 
               <p className="text-center text-gray-600 text-sm mb-6">
-                Verify your username to continue with ABC ID verification
+                Verify your UID to continue with ABC ID verification
               </p>
 
               <form onSubmit={handleSendOtp} className="space-y-4">
