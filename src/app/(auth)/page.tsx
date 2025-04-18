@@ -278,19 +278,19 @@ export default function Home() {
                 >
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700">
-                      Enter your 10-digit UID or email
+                      Enter your 10-digit UID
                     </label>
                     <Input
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter your 10-digit UID or email"
+                      placeholder="Enter your 10-digit UID"
                       required
                       className="w-full"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {!isValidIdentifier(username) && username.length > 0
-                        ? "Enter a valid email or 10-digit UID"
+                        ? "Enter a valid 10-digit UID"
                         : ""}
                     </p>
                   </div>
@@ -417,19 +417,19 @@ export default function Home() {
                 >
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700">
-                      Enter your UID or email
+                      Enter your UID
                     </label>
                     <Input
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter your 10-digit UID or email"
+                      placeholder="Enter your 10-digit UID"
                       required
                       className="w-full"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {!isValidIdentifier(username) && username.length > 0
-                        ? "Enter a valid email or 10-digit UID"
+                        ? "Enter a valid or 10-digit UID"
                         : ""}
                     </p>
                   </div>
