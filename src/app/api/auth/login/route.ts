@@ -33,6 +33,7 @@ function parseDob(dobString: string): string {
             return date.toISOString().split('T')[0];
         }
     } catch (e) {
+        console.log(e);
         // Failed to parse
     }
 
