@@ -27,7 +27,7 @@ export async function GET() {
         // Get approved students count
         const [approvedCount] = await db.select({ value: count() })
             .from(studentTable)
-            .where(eq(studentTable.approvedAt, true));
+            .where(eq(studentTable.isApproved, true));
 
         // Return statistics
         return NextResponse.json({

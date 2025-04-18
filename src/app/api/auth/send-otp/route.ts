@@ -19,6 +19,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
+       
+
         let user: User | Student | null = null;
         user = await getUserByEmail(username);
 

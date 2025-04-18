@@ -5,16 +5,16 @@ const fs = require('fs');
 // Create a sample worksheet
 const ws = xlsx.utils.aoa_to_sheet([
     // Headers
-    ['Name', 'UID', 'Email', 'Phone', 'Semester', 'Course', 'Shift', 'Section', 'Reg. No.', 'Roll No.', 'ABC Id'],
+    ['Name', 'UID', 'Email', 'Phone', 'DOB', 'Semester', 'Course', 'Shift', 'Section', 'Reg. No.', 'Roll No.', 'ABC Id'],
 
     // Sample data row 1
-    ['John Doe', 'ST12345', 'john.doe@example.com', '9876543210', '3', 'B.Tech Computer Science', 'DAY', 'A', 'REG123456', 'CS123', 'ABC123456'],
+    ['John Doe', 'ST12345', 'john.doe@example.com', '9876543210', '01-01-1998', '3', 'B.Tech Computer Science', 'DAY', 'A', 'REG123456', 'CS123', 'ABC123456'],
 
     // Sample data row 2
-    ['Jane Smith', 'ST67890', 'jane.smith@example.com', '9876543211', '5', 'B.Tech Electronics', 'MORNING', 'B', 'REG789012', 'EC456', 'ABC789012'],
+    ['Jane Smith', 'ST67890', 'jane.smith@example.com', '9876543211', '15-05-1999', '5', 'B.Tech Electronics', 'MORNING', 'B', 'REG789012', 'EC456', 'ABC789012'],
 
     // Sample data row 3
-    ['Robert Johnson', 'ST45678', 'robert.johnson@example.com', '9876543212', '7', 'MCA', 'EVENING', 'C', 'REG456789', 'MCA789', 'ABC456789']
+    ['Robert Johnson', 'ST45678', 'robert.johnson@example.com', '9876543212', '23-11-2000', '7', 'MCA', 'EVENING', 'C', 'REG456789', 'MCA789', 'ABC456789']
 ]);
 
 // Create workbook
@@ -27,6 +27,7 @@ const colWidth = [
     { wch: 10 }, // UID
     { wch: 25 }, // Email
     { wch: 15 }, // Phone
+    { wch: 12 }, // DOB
     { wch: 10 }, // Semester
     { wch: 25 }, // Course
     { wch: 10 }, // Shift

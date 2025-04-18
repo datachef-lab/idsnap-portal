@@ -1,4 +1,4 @@
-import { boolean, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, date, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 export const shiftEnum = pgEnum("shift_type", [
@@ -14,6 +14,7 @@ export const studentTable = pgTable("students", {
     uid: varchar({ length: 255 }).notNull().unique(),
     email: varchar({ length: 255 }).notNull(),
     phone: varchar({ length: 255 }).notNull(),
+    dob: date().default(new Date().toISOString()),
     semester: varchar({ length: 255 }).notNull(),
     course: varchar({ length: 500 }).notNull(),
     shift: shiftEnum().notNull().default("DAY"),
@@ -23,18 +24,18 @@ export const studentTable = pgTable("students", {
     abcId: varchar("abc_id", { length: 255 }).notNull(),
     checkedAt: timestamp("checked_in_at"),
     verifiedAt: timestamp("verified_at"),
-    approvedAt: boolean("approved_at").default(false),
+    isApproved: boolean("is_approved").default(false),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const usersTable = pgTable("users", {
-  id: serial().primaryKey(),
-  name: varchar({ length: 255 }).notNull(),
-  email: varchar({ length: 255 }).notNull().unique(),
-  phone: varchar({ length: 255 }).notNull().unique(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+    id: serial().primaryKey(),
+    name: varchar({ length: 255 }).notNull(),
+    email: varchar({ length: 255 }).notNull().unique(),
+    phone: varchar({ length: 255 }).notNull().unique(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const otpTable = pgTable("otps", {

@@ -1,46 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateTokens, setAuthCookies, getUserByEmail } from '@/lib/services/auth-service';
-import { Student, User } from '@/lib/db/schema';
+import { generateTokens } from '@/lib/services/auth-service';
+import { Student } from '@/lib/db/schema';
+import { getStudentByUidAndDob } from '@/lib/services/student-service';
 
 export async function POST(req: NextRequest) {
     try {
-        const { uid, password } = await req.json();
+        const { uid, dob } = await req.json();
 
-        if (!uid || !password) {
-            return NextResponse.json({ error: 'UID and password are required' }, { status: 400 });
+        if (!uid || !dob) {
+            return NextResponse.json({ error: 'UID and Date of Birth are required' }, { status: 400 });
         }
 
         console.log(`Login attempt for UID: ${uid}`);
 
-        // Normal login flow
-        try {
-            const user: User | Student | null = await getUserByEmail(uid);
-            console.log(`User found for UID ${uid}:`, user ? "Yes" : "No");
+        // Format dob to ISO string if it's not already
+        // Convert from DD-MM-YYYY to YYYY-MM-DD for database comparison
+        let formattedDob;
 
-            if (!user) {
-                return NextResponse.json({ error: 'Invalid UID or password' }, { status: 401 });
+        if (/^\d{2}-\d{2}-\d{4}$/.test(dob)) {
+            // Split the DD-MM-YYYY format
+            const [day, month, year] = dob.split('-');
+            formattedDob = `${year}-${month}-${day}`;
+        } else {
+            // Fallback - try to use the provided date directly
+            formattedDob = new Date(dob).toISOString().split('T')[0];
+        }
+
+        // Login flow using UID and DOB
+        try {
+            const student: Student | null = await getStudentByUidAndDob(uid, formattedDob);
+            console.log(`Student found for UID ${uid} and DOB:`, student ? "Yes" : "No");
+
+            if (!student) {
+                return NextResponse.json({ error: 'Invalid UID or Date of Birth' }, { status: 401 });
             }
 
-            console.log("Login successful for user:", user.name);
-            const tokens = generateTokens(user);
+            console.log("Login successful for student:", student.name);
+            // Generate auth tokens using the proper JWT function
+            const { accessToken, refreshToken } = generateTokens(student);
 
-            // Determine redirect URL based on user type
-            // Check if user object has a uid property (indicating it's a Student)
-            const redirectUrl = 'uid' in user ? `/${user.uid}` : '/home';
+            // Normalize the UID for redirect - remove ST prefix if present
+            const normalizedUid = student.uid.startsWith('ST') ? student.uid.substring(2) : student.uid;
+            // Determine redirect URL based on user type using the normalized UID
+            const redirectUrl = `/${normalizedUid}`;
 
-            const response = setAuthCookies(tokens);
-            return NextResponse.json({
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email
-                },
-                accessToken: tokens.accessToken,
-                redirectUrl
-            }, response);
+            console.log(`Redirecting to: ${redirectUrl}, Original UID: ${student.uid}, Normalized UID: ${normalizedUid}`);
+
+            // Create response with cookies
+            const response = NextResponse.json({
+                success: true,
+                message: 'Login successfully',
+                data: {
+                    accessToken,
+                    refreshToken,
+                    uid: student.uid,
+                    userType: "student",
+                    redirectUrl
+                }
+            });
+
+            // Set cookies using response
+            response.cookies.set('refreshToken', refreshToken, {
+                path: '/',
+                httpOnly: true,
+                sameSite: 'lax',
+                maxAge: 30 * 24 * 60 * 60, // 30 days
+            });
+
+            // Set user's uid in the cookie
+            response.cookies.set('uid', student.uid, {
+                path: '/',
+                httpOnly: true,
+                secure: false,
+                sameSite: 'lax',
+                maxAge: 30 * 24 * 60 * 60, // 30 days
+            });
+
+            response.cookies.set('userType', "student", {
+                path: '/',
+                httpOnly: true,
+                sameSite: 'lax',
+                secure: false,
+                maxAge: 30 * 24 * 60 * 60, // 30 days
+            });
+
+            return response;
         } catch (error) {
-            console.error("Error during getUserByUid:", error);
-            return NextResponse.json({ error: 'User lookup failed' }, { status: 500 });
+            console.error("Error during student lookup:", error);
+            return NextResponse.json({ error: 'Student lookup failed' }, { status: 500 });
         }
     } catch (error) {
         console.error('Login error:', error);

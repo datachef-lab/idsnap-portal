@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, Shield } from "lucide-react";
+import { Mail, Shield, Calendar } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
+  const [loginMethod, setLoginMethod] = useState<"otp" | "dob">("otp");
   const [username, setUsername] = useState("");
+  const [dob, setDob] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState("");
@@ -113,6 +115,47 @@ export default function Home() {
     }
   };
 
+  // Function to handle DOB-based login
+  const handleDobLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uid: username,
+          dob: dob,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Store tokens in localStorage for client-side usage
+        localStorage.setItem("accessToken", data.data.accessToken);
+        localStorage.setItem("refreshToken", data.data.refreshToken);
+        localStorage.setItem("uid", data.data.uid);
+        localStorage.setItem("userType", data.data.userType);
+
+        console.log("Login successful, redirecting to:", data.data.redirectUrl);
+        // Redirect to the appropriate page
+        router.push(data.data.redirectUrl);
+      } else {
+        setError(data.error || "Login failed. Please try again.");
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("An error occurred during login. Please try again.");
+      setLoading(false);
+    }
+  };
+
   // Update timer every second
   useEffect(() => {
     if (!expiresAt) return;
@@ -157,122 +200,239 @@ export default function Home() {
           <p className="text-white/90 text-lg">ABC ID Verification System</p>
         </div>
         <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-auto">
-          {!otpSent ? (
-            <div className="p-6">
-              <div className="flex justify-center mb-5">
-                <div className="p-3 rounded-full bg-indigo-100">
-                  <Mail className="h-6 w-6 text-indigo-600" />
-                </div>
-              </div>
+          {/* Login method toggle tabs */}
+          <div className="flex border-b">
+            <button
+              onClick={() => {
+                setLoginMethod("otp");
+                setOtpSent(false);
+                setError("");
+              }}
+              className={`flex-1 py-3 font-medium text-sm ${
+                loginMethod === "otp"
+                  ? "text-indigo-600 border-b-2 border-indigo-600"
+                  : "text-gray-500 hover:text-indigo-500"
+              }`}
+            >
+              Login with OTP
+            </button>
+            <button
+              onClick={() => {
+                setLoginMethod("dob");
+                setOtpSent(false);
+                setError("");
+              }}
+              className={`flex-1 py-3 font-medium text-sm ${
+                loginMethod === "dob"
+                  ? "text-indigo-600 border-b-2 border-indigo-600"
+                  : "text-gray-500 hover:text-indigo-500"
+              }`}
+            >
+              Login with DOB
+            </button>
+          </div>
 
-              <p className="text-center text-sm text-gray-600  mb-6">
-                Verify your UID to continue with ABC ID verification
-              </p>
-
-              <form onSubmit={handleSendOtp} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700">
-                    Enter your 10-digit UID
-                  </label>
-                  <Input
-                    type="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter your UID"
-                    required
-                    className="w-full"
-                  />
-                </div>
-
-                {error && (
-                  <div className="p-2 bg-red-50 text-red-600 rounded text-sm">
-                    {error}
+          {/* Form container with fixed height to prevent layout shifting */}
+          <div className="min-h-[400px] flex flex-col">
+            {/* OTP Login Method */}
+            {loginMethod === "otp" && !otpSent && (
+              <div className="p-6 flex-1 flex flex-col h-full">
+                <div className="flex justify-center mb-5">
+                  <div className="p-3 rounded-full bg-indigo-100">
+                    <Mail className="h-6 w-6 text-indigo-600" />
                   </div>
-                )}
+                </div>
 
-                <Button
-                  type="submit"
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2"
-                  disabled={loading}
+                <h3 className="text-xl font-semibold text-center mb-2">
+                  Login with OTP
+                </h3>
+                <p className="text-center text-gray-600 text-sm mb-6">
+                  Verify your UID to continue with ABC ID verification
+                </p>
+
+                <form
+                  onSubmit={handleSendOtp}
+                  className="space-y-4 flex flex-col flex-1"
                 >
-                  {loading ? "Sending..." : "Send OTP"}
-                </Button>
-              </form>
-            </div>
-          ) : (
-            <div className="p-6">
-              <div className="flex justify-center mb-5">
-                <div className="p-3 rounded-full bg-indigo-100">
-                  <Shield className="h-6 w-6 text-indigo-600" />
-                </div>
-              </div>
-
-              <h3 className="text-xl font-semibold text-center mb-2">
-                Verify Your Account
-              </h3>
-              <p className="text-center text-gray-600 text-sm mb-6">
-                Enter the OTP sent to your username address
-              </p>
-
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700">
-                    Enter OTP
-                  </label>
-                  <Input
-                    id="otp-input"
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    placeholder="Enter the 6-digit OTP"
-                    required
-                    maxLength={6}
-                    className="w-full text-center tracking-widest text-lg"
-                  />
-                  {remainingTime && (
-                    <p className="text-xs text-gray-500 mt-1 text-center">
-                      OTP expires in {remainingTime} (valid for 2 minutes)
-                    </p>
-                  )}
-                </div>
-
-                {error && (
-                  <div className="p-2 bg-red-50 text-red-600 rounded text-sm">
-                    {error}
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">
+                      Enter your 10-digit UID
+                    </label>
+                    <Input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Enter your UID"
+                      required
+                      className="w-full"
+                    />
                   </div>
-                )}
 
-                <div className="flex space-x-2 pt-2">
-                  <Button
-                    type="button"
-                    className="w-1/3 bg-gray-200 hover:bg-gray-300 text-gray-700"
-                    disabled={loading}
-                    onClick={() => setOtpSent(false)}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white"
-                    disabled={loading}
-                  >
-                    {loading ? "Verifying..." : "Verify OTP"}
-                  </Button>
+                  {error && (
+                    <div className="p-2 bg-red-50 text-red-600 rounded text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="mt-auto pt-4">
+                    <Button
+                      type="submit"
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2"
+                      disabled={loading}
+                    >
+                      {loading ? "Sending..." : "Send OTP"}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* OTP Verification */}
+            {loginMethod === "otp" && otpSent && (
+              <div className="p-6 flex-1 flex flex-col h-full">
+                <div className="flex justify-center mb-5">
+                  <div className="p-3 rounded-full bg-indigo-100">
+                    <Shield className="h-6 w-6 text-indigo-600" />
+                  </div>
                 </div>
 
-                <div className="text-center text-sm text-gray-500">
-                  <button
-                    type="button"
-                    className="text-indigo-600 hover:text-indigo-800"
-                    onClick={handleSendOtp}
-                    disabled={loading}
-                  >
-                    Resend OTP
-                  </button>
+                <h3 className="text-xl font-semibold text-center mb-2">
+                  Verify Your Account
+                </h3>
+                <p className="text-center text-gray-600 text-sm mb-6">
+                  Enter the OTP sent to your username address
+                </p>
+
+                <form
+                  onSubmit={handleVerifyOtp}
+                  className="space-y-4 flex flex-col flex-1"
+                >
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">
+                      Enter OTP
+                    </label>
+                    <Input
+                      id="otp-input"
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      placeholder="Enter the 6-digit OTP"
+                      required
+                      maxLength={6}
+                      className="w-full text-center tracking-widest text-lg"
+                    />
+                    {remainingTime && (
+                      <p className="text-xs text-gray-500 mt-1 text-center">
+                        OTP expires in {remainingTime} (valid for 2 minutes)
+                      </p>
+                    )}
+                  </div>
+
+                  {error && (
+                    <div className="p-2 bg-red-50 text-red-600 rounded text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="text-center text-sm text-gray-500 mb-2">
+                    <button
+                      type="button"
+                      className="text-indigo-600 hover:text-indigo-800"
+                      onClick={handleSendOtp}
+                      disabled={loading}
+                    >
+                      Resend OTP
+                    </button>
+                  </div>
+
+                  <div className="flex space-x-2 mt-auto">
+                    <Button
+                      type="button"
+                      className="w-1/3 bg-gray-200 hover:bg-gray-300 text-gray-700"
+                      disabled={loading}
+                      onClick={() => setOtpSent(false)}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white"
+                      disabled={loading}
+                    >
+                      {loading ? "Verifying..." : "Verify OTP"}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* DOB Login Method */}
+            {loginMethod === "dob" && (
+              <div className="p-6 flex-1 flex flex-col h-full">
+                <div className="flex justify-center mb-5">
+                  <div className="p-3 rounded-full bg-indigo-100">
+                    <Calendar className="h-6 w-6 text-indigo-600" />
+                  </div>
                 </div>
-              </form>
-            </div>
-          )}
+
+                <h3 className="text-xl font-semibold text-center mb-2">
+                  Login with DOB
+                </h3>
+                <p className="text-center text-gray-600 text-sm mb-6">
+                  Enter your UID and Date of Birth to continue
+                </p>
+
+                <form
+                  onSubmit={handleDobLogin}
+                  className="space-y-4 flex flex-col flex-1"
+                >
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">
+                      Enter your UID
+                    </label>
+                    <Input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Enter your UID"
+                      required
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">
+                      Date of Birth
+                    </label>
+                    <Input
+                      type="date"
+                      value={dob}
+                      onChange={(e) => setDob(e.target.value)}
+                      required
+                      className="w-full"
+                      placeholder="DD-MM-YYYY"
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="p-2 bg-red-50 text-red-600 rounded text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="mt-auto pt-4">
+                    <Button
+                      type="submit"
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2"
+                      disabled={loading}
+                    >
+                      {loading ? "Logging in..." : "Login"}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

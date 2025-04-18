@@ -415,6 +415,12 @@ export default function UploadStudentDataPage() {
                   </span>
                 </li>
                 <li>
+                  DOB{" "}
+                  <span className="text-xs text-indigo-500">
+                    (Date of Birth, format: DD-MM-YYYY)
+                  </span>
+                </li>
+                <li>
                   Semester{" "}
                   <span className="text-xs text-indigo-500">
                     (Current semester number)

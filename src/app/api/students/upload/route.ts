@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
             try {
                 // Validate required fields
-                const requiredFields = ['Name', 'UID', 'Email', 'Phone', 'Semester', 'Course', 'Shift', 'Section', 'ABC Id'];
+                const requiredFields = ['Name', 'UID', 'Email', 'Phone', 'DOB', 'Semester', 'Course', 'Shift', 'Section', 'ABC Id'];
                 for (const field of requiredFields) {
                     if (!row[field]) {
                         throw new Error(`Missing required field '${field}'`);
@@ -67,12 +67,23 @@ export async function POST(request: NextRequest) {
                     throw new Error(`Invalid email format: '${email}'`);
                 }
 
+                // Validate DOB format and convert to YYYY-MM-DD for database
+                const dobInput = String(row['DOB']);
+                if (!isValidDateFormat(dobInput)) {
+                    throw new Error(`Invalid DOB format: '${dobInput}'. Use DD-MM-YYYY format.`);
+                }
+
+                // Convert from DD-MM-YYYY to YYYY-MM-DD for database storage
+                const [day, month, year] = dobInput.split('-');
+                const formattedDob = `${year}-${month}-${day}`;
+
                 // Create student object
                 const studentData: Student = {
                     name: String(row['Name']),
                     uid: String(row['UID']),
                     email: String(row['Email']),
                     phone: String(row['Phone']),
+                    dob: formattedDob,
                     semester: String(row['Semester']),
                     course: String(row['Course']),
                     shift: validateShift(String(row['Shift']).toUpperCase()),
@@ -124,4 +135,19 @@ function validateShift(shiftValue: string): "DAY" | "MORNING" | "AFTERNOON" | "E
 function isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+}
+
+// Function to validate date format (DD-MM-YYYY)
+function isValidDateFormat(dateString: string): boolean {
+    const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
+    if (!dateRegex.test(dateString)) return false;
+
+    // Extract day, month, and year
+    const [day, month, year] = dateString.split('-').map(Number);
+
+    // Check if the date is valid
+    const date = new Date(year, month - 1, day);
+    return date.getFullYear() === year &&
+        date.getMonth() === month - 1 &&
+        date.getDate() === day;
 } 

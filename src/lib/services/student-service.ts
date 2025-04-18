@@ -1,6 +1,6 @@
 import db from "@/lib/db";
 import { Student, studentTable } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export async function createStudent(student: Student) {
     // Check if the student already exists
@@ -20,6 +20,7 @@ export async function createStudent(student: Student) {
         semester: student.semester.trim(),
         course: student.course.trim(),
         section: student.section.trim(),
+        dob: student.dob?.trim(),
         registrationNumber: student.registrationNumber?.trim(),
         rollNumber: student.rollNumber?.trim(),
         abcId: student.abcId.trim(),
@@ -78,4 +79,22 @@ export async function updateStudent(student: Student) {
 
 export async function deleteStudent(id: number) {
     await db.delete(studentTable).where(eq(studentTable.id, id));
+}
+
+export async function getStudentByUidAndDob(uid: string, dob: string) {
+    // Ensure uid is properly formatted and trimmed
+    const formattedUid = uid.trim();
+
+    // Try to find the student with the given UID and DOB
+    const [foundStudent] =
+        await db.select()
+            .from(studentTable)
+            .where(
+                and(
+                    eq(studentTable.uid, formattedUid),
+                    eq(studentTable.dob, dob)
+                )
+            );
+
+    return foundStudent;
 }

@@ -15,6 +15,13 @@
       "when": 1744829577372,
       "tag": "0001_cheerful_lady_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744957510521,
+      "tag": "0002_worthless_human_torch",
+      "breakpoints": true
     }
   ]
 }
