@@ -70,11 +70,12 @@ export async function POST(request: NextRequest) {
                 // Validate DOB format and convert to YYYY-MM-DD for database
                 const dobInput = String(row['DOB']);
                 if (!isValidDateFormat(dobInput)) {
-                    throw new Error(`Invalid DOB format: '${dobInput}'. Use DD-MM-YYYY format.`);
+                    throw new Error(`Invalid DOB format: '${dobInput}'. Use DD-MM-YYYY or DD/MM/YYYY format.`);
                 }
 
-                // Convert from DD-MM-YYYY to YYYY-MM-DD for database storage
-                const [day, month, year] = dobInput.split('-');
+                // Convert from DD-MM-YYYY or DD/MM/YYYY to YYYY-MM-DD for database storage
+                const separator = dobInput.includes('-') ? '-' : '/';
+                const [day, month, year] = dobInput.split(separator);
                 const formattedDob = `${year}-${month}-${day}`;
 
                 // Create student object
@@ -137,13 +138,19 @@ function isValidEmail(email: string): boolean {
     return emailRegex.test(email);
 }
 
-// Function to validate date format (DD-MM-YYYY)
+// Function to validate date format (DD-MM-YYYY or DD/MM/YYYY)
 function isValidDateFormat(dateString: string): boolean {
-    const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
-    if (!dateRegex.test(dateString)) return false;
+    // Check for both dash and slash formats
+    const dashRegex = /^\d{2}-\d{2}-\d{4}$/;
+    const slashRegex = /^\d{2}\/\d{2}\/\d{4}$/;
 
-    // Extract day, month, and year
-    const [day, month, year] = dateString.split('-').map(Number);
+    if (!dashRegex.test(dateString) && !slashRegex.test(dateString)) {
+        return false;
+    }
+
+    // Extract day, month, and year using the appropriate separator
+    const separator = dateString.includes('-') ? '-' : '/';
+    const [day, month, year] = dateString.split(separator).map(Number);
 
     // Check if the date is valid
     const date = new Date(year, month - 1, day);

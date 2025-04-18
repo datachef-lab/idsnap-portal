@@ -4,6 +4,18 @@ import { Student } from '@/lib/db/schema';
 import { getStudentByUidAndDob } from '@/lib/services/student-service';
 import { getStudentByEmail } from '@/lib/services/student-service';
 
+// Helper function to parse DOB from DD/MM/YYYY format
+function parseDob(dobString: string): string {
+    // Handle common formats: DD/MM/YYYY or DD-MM-YYYY
+    const parts = dobString.split(/[-\/]/);
+    if (parts.length === 3) {
+        const [day, month, year] = parts;
+        // Create a date in YYYY-MM-DD format for ISO conversion
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return dobString; // Return as-is if format doesn't match
+}
+
 export async function POST(req: NextRequest) {
     try {
         const { uid, dob, isEmail } = await req.json();
@@ -19,20 +31,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'DOB login must use a 10-digit UID, not email' }, { status: 400 });
         }
 
-        // Format dob to ISO string if it's not already
-        // Convert from DD-MM-YYYY to YYYY-MM-DD for database comparison
-        let formattedDob;
+        // Parse DOB to handle different formats
+        const parsedDob = parseDob(dob);
 
-        if (/^\d{2}-\d{2}-\d{4}$/.test(dob)) {
-            // Split the DD-MM-YYYY format
-            const [day, month, year] = dob.split('-');
-            formattedDob = `${year}-${month}-${day}`;
-        } else {
-            // Fallback - try to use the provided date directly
-            formattedDob = new Date(dob).toISOString().split('T')[0];
-        }
-
-        console.log("Formatted DOB:", formattedDob);
+        console.log("Formatted DOB:", parsedDob);
 
         // Login flow using UID/Email and DOB
         try {
@@ -44,8 +46,8 @@ export async function POST(req: NextRequest) {
                 student = await getStudentByEmail(uid);
 
                 // If student found, check DOB
-                if (student && student.dob !== formattedDob) {
-                    console.log(`DOB mismatch for email ${uid}. Expected: ${student.dob}, Got: ${formattedDob}`);
+                if (student && student.dob !== parsedDob) {
+                    console.log(`DOB mismatch for email ${uid}. Expected: ${student.dob}, Got: ${parsedDob}`);
                     student = null;
                 }
             } else {
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
                 console.log(`Looking up student by UID: ${normalizedUid}`);
 
                 // Look up by UID and DOB
-                student = await getStudentByUidAndDob(normalizedUid, formattedDob);
+                student = await getStudentByUidAndDob(normalizedUid, parsedDob);
             }
 
             console.log(`Student found:`, student ? "Yes" : "No");
