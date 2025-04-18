@@ -249,7 +249,7 @@ export default function Home() {
                   : "text-gray-500 hover:text-indigo-500"
               }`}
             >
-              Login with Email/UID
+              Login with UID
             </button>
             <button
               onClick={() => {
@@ -282,7 +282,7 @@ export default function Home() {
                   Login with OTP
                 </h3>
                 <p className="text-center text-gray-600 text-sm mb-6">
-                  Enter your email or UID to receive a verification code
+                  Enter your UID to receive a verification code
                 </p>
 
                 <form
@@ -291,19 +291,19 @@ export default function Home() {
                 >
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700">
-                      Enter your 10-digit UID or email
+                      Enter your 10-digit UID
                     </label>
                     <Input
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter your 10-digit UID or email"
+                      placeholder="Enter your 10-digit UID"
                       required
                       className="w-full"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {!isValidIdentifier(username) && username.length > 0
-                        ? "Enter a valid email or 10-digit UID"
+                        ? "Enter a valid 10-digit UID"
                         : ""}
                     </p>
                   </div>
