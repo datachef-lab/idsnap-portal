@@ -11,7 +11,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'UID and Date of Birth are required' }, { status: 400 });
         }
 
-        console.log(`Login attempt for UID: ${uid}`);
+        // Normalize the UID by ensuring it's a 10-digit string with leading zeros
+        const normalizedUid = normalizeUid(uid);
+        console.log(`Login attempt for UID: ${uid} (normalized: ${normalizedUid})`);
 
         // Format dob to ISO string if it's not already
         // Convert from DD-MM-YYYY to YYYY-MM-DD for database comparison
@@ -28,8 +30,8 @@ export async function POST(req: NextRequest) {
 
         // Login flow using UID and DOB
         try {
-            const student: Student | null = await getStudentByUidAndDob(uid, formattedDob);
-            console.log(`Student found for UID ${uid} and DOB:`, student ? "Yes" : "No");
+            const student: Student | null = await getStudentByUidAndDob(normalizedUid, formattedDob);
+            console.log(`Student found for UID ${normalizedUid} and DOB:`, student ? "Yes" : "No");
 
             if (!student) {
                 return NextResponse.json({ error: 'Invalid UID or Date of Birth' }, { status: 401 });
@@ -40,11 +42,11 @@ export async function POST(req: NextRequest) {
             const { accessToken, refreshToken } = generateTokens(student);
 
             // Normalize the UID for redirect - remove ST prefix if present
-            const normalizedUid = student.uid.startsWith('ST') ? student.uid.substring(2) : student.uid;
+            const redirectUid = student.uid.startsWith('ST') ? student.uid.substring(2) : student.uid;
             // Determine redirect URL based on user type using the normalized UID
-            const redirectUrl = `/${normalizedUid}`;
+            const redirectUrl = `/${redirectUid}`;
 
-            console.log(`Redirecting to: ${redirectUrl}, Original UID: ${student.uid}, Normalized UID: ${normalizedUid}`);
+            console.log(`Redirecting to: ${redirectUrl}, Original UID: ${student.uid}, Redirect UID: ${redirectUid}`);
 
             // Create response with cookies
             const response = NextResponse.json({
@@ -93,4 +95,10 @@ export async function POST(req: NextRequest) {
         console.error('Login error:', error);
         return NextResponse.json({ error: 'An error occurred during login' }, { status: 500 });
     }
+}
+
+// Normalize UID by removing any non-numeric characters
+function normalizeUid(uid: string): string {
+    // Remove any non-numeric characters
+    return uid.replace(/\D/g, '');
 }

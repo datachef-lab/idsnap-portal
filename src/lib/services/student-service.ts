@@ -15,7 +15,7 @@ export async function createStudent(student: Student) {
         name: student.name.trim(),
         email: student.email.trim(),
         phone: student.phone.trim(),
-        uid: student.uid.trim(),
+        uid: student.uid.trim().padStart(10, '0'),
         shift: student.shift?.trim().toUpperCase() as "DAY" | "MORNING" | "AFTERNOON" | "EVENING",
         semester: student.semester.trim(),
         course: student.course.trim(),
@@ -82,8 +82,10 @@ export async function deleteStudent(id: number) {
 }
 
 export async function getStudentByUidAndDob(uid: string, dob: string) {
-    // Ensure uid is properly formatted and trimmed
-    const formattedUid = uid.trim();
+    // Normalize uid: remove non-numeric characters and pad with zeros
+    const formattedUid = uid.replace(/\D/g, '').trim().padStart(10, '0');
+
+    console.log(`Looking up student with normalized UID: ${formattedUid}, DOB: ${dob}`);
 
     // Try to find the student with the given UID and DOB
     const [foundStudent] =

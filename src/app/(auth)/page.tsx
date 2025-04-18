@@ -18,39 +18,64 @@ export default function Home() {
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [remainingTime, setRemainingTime] = useState<string | null>(null);
 
+  // UID validation - check if it's exactly 10 digits
+  const isValidUid = (uid: string) => {
+    const numericUid = uid.replace(/\D/g, "");
+    return numericUid.length === 10;
+  };
+
+  // Email validation
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Check if input is either a valid email or a valid UID
+  const isValidIdentifier = (input: string) => {
+    return isValidEmail(input) || isValidUid(input);
+  };
+
+  // Normalize UID by ensuring it's exactly 10 digits
+  const normalizeUid = (uid: string) => {
+    // Remove any non-numeric characters
+    return uid.replace(/\D/g, "");
+  };
+
   // Function to handle sending OTP
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
+    // Determine if input is email or UID and handle accordingly
+    const isEmail = isValidEmail(username);
+    // If UID, normalize it by removing non-numeric characters
+    const normalizedInput = isEmail ? username : normalizeUid(username);
+
     try {
-      // Call the send-otp API
+      // Send OTP request
       const response = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({
+          username: normalizedInput,
+          isEmail: isEmail,
+        }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to send OTP");
+      if (response.ok) {
+        setOtpSent(true);
+        setExpiresAt(Date.now() + 2 * 60 * 1000); // 2 minutes expiry
+      } else {
+        setError(data.message || "Failed to send OTP");
       }
-
-      // OTP sent successfully
-      setOtpSent(true);
-      setExpiresAt(data.expiresAt);
-
-      // Focus OTP input
-      setTimeout(() => {
-        const otpInput = document.getElementById("otp-input");
-        if (otpInput) otpInput.focus();
-      }, 100);
     } catch (error) {
-      setError((error as Error).message || "Something went wrong");
+      console.log(error);
+      setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -62,55 +87,42 @@ export default function Home() {
     setError("");
     setLoading(true);
 
+    // Determine if input is email or UID and handle accordingly
+    const isEmail = isValidEmail(username);
+    // If UID, normalize it by removing non-numeric characters
+    const normalizedInput = isEmail ? username : normalizeUid(username);
+
     try {
-      // Call the verify-otp API
       const response = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, otp }),
+        body: JSON.stringify({
+          username: normalizedInput,
+          otp,
+          isEmail: isEmail,
+        }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to verify OTP");
-      }
+      if (response.ok && data.success) {
+        // Store tokens and user info
+        localStorage.setItem("accessToken", data.data.accessToken);
+        localStorage.setItem("refreshToken", data.data.refreshToken);
+        localStorage.setItem("uid", data.data.uid);
+        localStorage.setItem("userType", data.data.userType);
 
-      // Handle successful verification
-      if (data.data) {
-        const { accessToken, refreshToken, uid, userType, redirectUrl } =
-          data.data;
-
-        console.log("OTP verification successful - Received data:", {
-          hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-          uid,
-          userType,
-          redirectUrl,
-        });
-
-        // Store tokens and user info in localStorage for client-side access
-        localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("refreshToken", refreshToken);
-        localStorage.setItem("uid", uid || "");
-        localStorage.setItem("userType", userType);
-
-        // Set cookies for middleware
-        document.cookie = `refreshToken=${refreshToken}; path=/;`;
-        document.cookie = `uid=${uid}; path=/;`;
-        document.cookie = `userType=${userType}; path=/;`;
-
-        console.log("OTP verification successful");
-        console.log("Redirecting to", redirectUrl);
-
-        // Navigate to the redirect URL provided by the API
-        router.push(redirectUrl);
+        // Redirect to the appropriate page
+        router.push(data.data.redirectUrl);
+      } else {
+        setError(data.message || "Invalid OTP");
+        setLoading(false);
       }
     } catch (error) {
-      setError((error as Error).message || "Something went wrong");
-    } finally {
+      console.log(error);
+      setError("Verification failed. Please try again.");
       setLoading(false);
     }
   };
@@ -121,6 +133,9 @@ export default function Home() {
     setError("");
     setLoading(true);
 
+    // Normalize the UID by padding with zeros
+    const normalizedUid = normalizeUid(username);
+
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -128,7 +143,7 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          uid: username,
+          uid: normalizedUid,
           dob: dob,
         }),
       });
@@ -182,6 +197,14 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [expiresAt]);
 
+  // Check if UID is valid for OTP form
+  const isOtpFormValid =
+    username.trim().length > 0 && isValidIdentifier(username);
+
+  // Check if form is valid for DOB login
+  const isDobFormValid =
+    username.trim().length > 0 && dob && isValidIdentifier(username);
+
   return (
     <main className="min-h-screen flex flex-col items-center bg-gradient-to-b from-indigo-400 via-violet-500 to-purple-600">
       {/* Header at top */}
@@ -195,9 +218,8 @@ export default function Home() {
       <div className="flex-1 flex flex-col items-center justify-center w-full px-4">
         <div className="w-full text-center py-8">
           <h1 className="text-2xl font-bold mt-2 mb-2 text-white">
-            Portal for APAAR ID (ABC ID) confirmation portal
+            APAAR ID Confirmation Portal
           </h1>
-          <p className="text-white/90 text-lg">ABC ID Verification System</p>
         </div>
         <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-auto">
           {/* Login method toggle tabs */}
@@ -256,16 +278,21 @@ export default function Home() {
                 >
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700">
-                      Enter your 10-digit UID
+                      Enter your 10-digit UID or email
                     </label>
                     <Input
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter your UID"
+                      placeholder="Enter your 10-digit UID or email"
                       required
                       className="w-full"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {!isValidIdentifier(username) && username.length > 0
+                        ? "Enter a valid email or 10-digit UID"
+                        : ""}
+                    </p>
                   </div>
 
                   {error && (
@@ -278,7 +305,7 @@ export default function Home() {
                     <Button
                       type="submit"
                       className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2"
-                      disabled={loading}
+                      disabled={loading || !isOtpFormValid}
                     >
                       {loading ? "Sending..." : "Send OTP"}
                     </Button>
@@ -315,7 +342,9 @@ export default function Home() {
                       id="otp-input"
                       type="text"
                       value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
+                      onChange={(e) =>
+                        setOtp(e.target.value.replace(/[^0-9]/g, ""))
+                      }
                       placeholder="Enter the 6-digit OTP"
                       required
                       maxLength={6}
@@ -357,7 +386,7 @@ export default function Home() {
                     <Button
                       type="submit"
                       className="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white"
-                      disabled={loading}
+                      disabled={loading || otp.length !== 6}
                     >
                       {loading ? "Verifying..." : "Verify OTP"}
                     </Button>
@@ -388,16 +417,21 @@ export default function Home() {
                 >
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700">
-                      Enter your UID
+                      Enter your UID or email
                     </label>
                     <Input
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter your UID"
+                      placeholder="Enter your 10-digit UID or email"
                       required
                       className="w-full"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {!isValidIdentifier(username) && username.length > 0
+                        ? "Enter a valid email or 10-digit UID"
+                        : ""}
+                    </p>
                   </div>
 
                   <div>
@@ -424,7 +458,7 @@ export default function Home() {
                     <Button
                       type="submit"
                       className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2"
-                      disabled={loading}
+                      disabled={loading || !isDobFormValid}
                     >
                       {loading ? "Logging in..." : "Login"}
                     </Button>
