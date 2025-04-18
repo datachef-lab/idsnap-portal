@@ -2,7 +2,7 @@ import db from "@/lib/db";
 import { Otp, otpTable, Student, User } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getUserByEmail, getUserByUid } from "./auth-service";
-import { sendEmail, sendWhatsAppMessage } from "./notification-service";
+import { sendWhatsAppMessage } from "./notification-service";
 
 export async function createOtp(email: string | null, uid: string | null) {
     if (!email && !uid) {
@@ -32,7 +32,7 @@ export async function createOtp(email: string | null, uid: string | null) {
     await sendWhatsAppMessage(user?.phone as string, [otp]);
 
     // Send email
-    await sendEmail(user?.email as string, "OTP for login", otp);
+    // await sendEmail(user?.email as string, "OTP for login", otp);
 
     return newOtp;
 }
@@ -42,7 +42,7 @@ export async function verifyOtp(email: string, otp: string) {
     if (!foundOtp) {
         return 0; // Invalid OTP
     }
-    else if (foundOtp.createdAt && new Date().getTime() - new Date(foundOtp.createdAt).getTime() > 1000 * 60 * 2) {
+    else if (foundOtp.createdAt && new Date().getTime() - new Date(foundOtp.createdAt).getTime() > 1000 * 60 * 3) {
         return -1; // OTP expired (2 minutes)
     }
 

@@ -74,7 +74,7 @@ export default function Home() {
 
       if (response.ok) {
         setOtpSent(true);
-        setExpiresAt(Date.now() + 2 * 60 * 1000); // 2 minutes expiry
+        setExpiresAt(Date.now() + 3 * 60 * 1000); // 2 minutes expiry
       } else {
         setError(data.message || "Failed to send OTP");
       }
@@ -340,7 +340,7 @@ export default function Home() {
                   Verify Your Account
                 </h3>
                 <p className="text-center text-gray-600 text-sm mb-6">
-                  Enter the OTP sent to your username address
+                  Enter the OTP sent to your WhatsApp
                 </p>
 
                 <form
@@ -365,7 +365,7 @@ export default function Home() {
                     />
                     {remainingTime && (
                       <p className="text-xs text-gray-500 mt-1 text-center">
-                        OTP expires in {remainingTime} (valid for 2 minutes)
+                        OTP expires in {remainingTime} (valid for 3 minutes)
                       </p>
                     )}
                   </div>
