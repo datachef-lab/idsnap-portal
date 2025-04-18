@@ -4,16 +4,39 @@ import { Student } from '@/lib/db/schema';
 import { getStudentByUidAndDob } from '@/lib/services/student-service';
 import { getStudentByEmail } from '@/lib/services/student-service';
 
-// Helper function to parse DOB from DD/MM/YYYY format
+// Helper function to parse DOB from various formats to YYYY-MM-DD
 function parseDob(dobString: string): string {
-    // Handle common formats: DD/MM/YYYY or DD-MM-YYYY
+    // Check if already in ISO format (YYYY-MM-DD)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dobString)) {
+        return dobString; // Already in correct format for database
+    }
+
+    // Handle DD/MM/YYYY or DD-MM-YYYY formats
     const parts = dobString.split(/[-\/]/);
     if (parts.length === 3) {
-        const [day, month, year] = parts;
-        // Create a date in YYYY-MM-DD format for ISO conversion
-        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        // Check if first part is day (DD-MM-YYYY) or year (YYYY-MM-DD)
+        if (parts[0].length === 4) {
+            // Already YYYY-MM-DD with wrong separators
+            const [year, month, day] = parts;
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        } else {
+            // DD-MM-YYYY format
+            const [day, month, year] = parts;
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
     }
-    return dobString; // Return as-is if format doesn't match
+
+    // For any other format, try to parse with Date
+    try {
+        const date = new Date(dobString);
+        if (!isNaN(date.getTime())) {
+            return date.toISOString().split('T')[0];
+        }
+    } catch (e) {
+        // Failed to parse
+    }
+
+    return dobString; // Return as-is if all parsing attempts fail
 }
 
 export async function POST(req: NextRequest) {
