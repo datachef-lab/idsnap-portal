@@ -430,6 +430,10 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
                           e.stopPropagation();
                           setFile(null);
                           setPreviewUrl(null);
+                          // Reset the file input value to allow reselecting the same file
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = "";
+                          }
                         }}
                       >
                         <X size={16} />
