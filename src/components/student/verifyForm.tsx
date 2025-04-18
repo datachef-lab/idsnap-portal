@@ -28,6 +28,7 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
     student?.abcId || ""
   );
   const [isEditingAbcId, setIsEditingAbcId] = useState<boolean>(false);
+  const [abcIdError, setAbcIdError] = useState<string | null>(null);
 
   // File upload management
   const [file, setFile] = useState<File | null>(null);
@@ -59,6 +60,25 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
       }, 50);
     }
   }, [isEditingAbcId]);
+
+  // Validate ABC ID
+  const validateAbcId = (id: string): boolean => {
+    // Check if it's exactly 12 digits
+    return /^\d{12}$/.test(id);
+  };
+
+  // Handle ABC ID change with validation
+  const handleAbcIdChange = (e: ChangeEvent<HTMLInputElement>) => {
+    // Only allow numeric input
+    const newValue = e.target.value.replace(/\D/g, "");
+    setAbcId(newValue);
+
+    if (newValue && !validateAbcId(newValue)) {
+      setAbcIdError("ABC ID must be exactly 12 digits");
+    } else {
+      setAbcIdError(null);
+    }
+  };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -284,8 +304,10 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
                         <input
                           type="text"
                           value={abcId}
-                          onChange={(e) => setAbcId(e.target.value)}
-                          className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          onChange={handleAbcIdChange}
+                          className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                            abcIdError ? "border-red-300" : ""
+                          }`}
                           placeholder="Enter your ABC ID"
                           autoFocus
                           ref={abcIdInputRef}
@@ -296,10 +318,16 @@ export function VerifyForm({ student, onSubmit }: VerifyFormProps) {
                           size="sm"
                           className="bg-indigo-600 hover:bg-indigo-700"
                           onClick={handleContinueAfterEdit}
+                          disabled={!validateAbcId(abcId)}
                         >
                           Continue
                         </Button>
                       </div>
+                      {abcIdError && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {abcIdError}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ) : (
