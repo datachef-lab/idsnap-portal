@@ -35,6 +35,11 @@ export default function Home() {
     return isValidEmail(input) || isValidUid(input);
   };
 
+  // Check if input is a valid UID only (for DOB login)
+  const isValidUidOnly = (input: string) => {
+    return isValidUid(input);
+  };
+
   // Normalize UID by ensuring it's exactly 10 digits
   const normalizeUid = (uid: string) => {
     // Remove any non-numeric characters
@@ -133,8 +138,14 @@ export default function Home() {
     setError("");
     setLoading(true);
 
-    // Normalize the UID by padding with zeros
-    const normalizedUid = normalizeUid(username);
+    // Determine if input is email or UID and handle accordingly
+    const isEmail = isValidEmail(username);
+    // If UID, normalize it by removing non-numeric characters
+    const normalizedInput = isEmail ? username : normalizeUid(username);
+
+    console.log(
+      `Attempting DOB login with: ${normalizedInput}, isEmail: ${isEmail}, DOB: ${dob}`
+    );
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -143,12 +154,14 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          uid: normalizedUid,
+          uid: normalizedInput,
           dob: dob,
+          isEmail: isEmail,
         }),
       });
 
       const data = await response.json();
+      console.log("Login response:", data);
 
       if (response.ok) {
         // Store tokens in localStorage for client-side usage
@@ -159,7 +172,7 @@ export default function Home() {
 
         console.log("Login successful, redirecting to:", data.data.redirectUrl);
         // Redirect to the appropriate page
-        router.push(data.data.redirectUrl);
+        window.location.href = data.data.redirectUrl;
       } else {
         setError(data.error || "Login failed. Please try again.");
         setLoading(false);
@@ -201,9 +214,9 @@ export default function Home() {
   const isOtpFormValid =
     username.trim().length > 0 && isValidIdentifier(username);
 
-  // Check if form is valid for DOB login
+  // Check if form is valid for DOB login - UID must be valid, email not allowed
   const isDobFormValid =
-    username.trim().length > 0 && dob && isValidIdentifier(username);
+    username.trim().length > 0 && dob && isValidUidOnly(username);
 
   return (
     <main className="min-h-screen flex flex-col items-center bg-gradient-to-b from-indigo-400 via-violet-500 to-purple-600">
@@ -236,7 +249,7 @@ export default function Home() {
                   : "text-gray-500 hover:text-indigo-500"
               }`}
             >
-              Login with OTP
+              Login with Email/UID
             </button>
             <button
               onClick={() => {
@@ -250,7 +263,7 @@ export default function Home() {
                   : "text-gray-500 hover:text-indigo-500"
               }`}
             >
-              Login with DOB
+              Login with UID & DOB
             </button>
           </div>
 
@@ -269,7 +282,7 @@ export default function Home() {
                   Login with OTP
                 </h3>
                 <p className="text-center text-gray-600 text-sm mb-6">
-                  Verify your UID to continue with ABC ID verification
+                  Enter your email or UID to receive a verification code
                 </p>
 
                 <form
@@ -278,19 +291,19 @@ export default function Home() {
                 >
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700">
-                      Enter your 10-digit UID
+                      Enter your 10-digit UID or email
                     </label>
                     <Input
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter your 10-digit UID"
+                      placeholder="Enter your 10-digit UID or email"
                       required
                       className="w-full"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {!isValidIdentifier(username) && username.length > 0
-                        ? "Enter a valid 10-digit UID"
+                        ? "Enter a valid email or 10-digit UID"
                         : ""}
                     </p>
                   </div>
@@ -405,10 +418,10 @@ export default function Home() {
                 </div>
 
                 <h3 className="text-xl font-semibold text-center mb-2">
-                  Login with DOB
+                  Login with UID & DOB
                 </h3>
                 <p className="text-center text-gray-600 text-sm mb-6">
-                  Enter your UID and Date of Birth to continue
+                  Enter your 10-digit UID and Date of Birth to continue
                 </p>
 
                 <form
@@ -417,19 +430,22 @@ export default function Home() {
                 >
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700">
-                      Enter your UID
+                      Enter your 10-digit UID
                     </label>
                     <Input
                       type="text"
                       value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={(e) =>
+                        setUsername(e.target.value.replace(/[^0-9]/g, ""))
+                      }
                       placeholder="Enter your 10-digit UID"
                       required
+                      maxLength={10}
                       className="w-full"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      {!isValidIdentifier(username) && username.length > 0
-                        ? "Enter a valid or 10-digit UID"
+                      {!isValidUidOnly(username) && username.length > 0
+                        ? "Please enter a valid 10-digit UID"
                         : ""}
                     </p>
                   </div>

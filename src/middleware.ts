@@ -21,8 +21,11 @@ export function middleware(request: NextRequest) {
     const isAuthenticated = !!refreshToken && !!uid;
     console.log(`isAuthenticated: ${isAuthenticated}`);
 
-    // For the root path / (login page)
-    if (pathname === '/' || pathname === '/api/auth/send-otp' || pathname === '/api/auth/verify-otp') {
+    // For the root path / (login page) and auth API endpoints
+    if (pathname === '/' ||
+        pathname.startsWith('/api/auth/send-otp') ||
+        pathname.startsWith('/api/auth/verify-otp') ||
+        pathname.startsWith('/api/auth/login')) {
         // Always allow access to the root path and auth endpoints, regardless of authentication status
         console.log('Access allowed to auth route');
         return NextResponse.next();
@@ -73,8 +76,12 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // Skip middleware for API routes except auth
+    // For API routes other than auth, ensure user is authenticated
     if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')) {
+        if (!isAuthenticated) {
+            console.log("Unauthenticated API access, returning 401");
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
         return NextResponse.next();
     }
 

@@ -2,18 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateTokens } from '@/lib/services/auth-service';
 import { Student } from '@/lib/db/schema';
 import { getStudentByUidAndDob } from '@/lib/services/student-service';
+import { getStudentByEmail } from '@/lib/services/student-service';
 
 export async function POST(req: NextRequest) {
     try {
-        const { uid, dob } = await req.json();
+        const { uid, dob, isEmail } = await req.json();
+        console.log("DOB Login request:", { uid, dob, isEmail });
 
         if (!uid || !dob) {
-            return NextResponse.json({ error: 'UID and Date of Birth are required' }, { status: 400 });
+            return NextResponse.json({ error: 'UID/Email and Date of Birth are required' }, { status: 400 });
         }
 
-        // Normalize the UID by ensuring it's a 10-digit string with leading zeros
-        const normalizedUid = normalizeUid(uid);
-        console.log(`Login attempt for UID: ${uid} (normalized: ${normalizedUid})`);
+        // For DOB login, we only accept UIDs, not emails
+        if (isEmail) {
+            console.log(`Email login attempt rejected for DOB method: ${uid}`);
+            return NextResponse.json({ error: 'DOB login must use a 10-digit UID, not email' }, { status: 400 });
+        }
 
         // Format dob to ISO string if it's not already
         // Convert from DD-MM-YYYY to YYYY-MM-DD for database comparison
@@ -28,13 +32,35 @@ export async function POST(req: NextRequest) {
             formattedDob = new Date(dob).toISOString().split('T')[0];
         }
 
-        // Login flow using UID and DOB
+        console.log("Formatted DOB:", formattedDob);
+
+        // Login flow using UID/Email and DOB
         try {
-            const student: Student | null = await getStudentByUidAndDob(normalizedUid, formattedDob);
-            console.log(`Student found for UID ${normalizedUid} and DOB:`, student ? "Yes" : "No");
+            let student: Student | null = null;
+
+            if (isEmail) {
+                // If input is an email, lookup by email
+                console.log(`Looking up student by email: ${uid}`);
+                student = await getStudentByEmail(uid);
+
+                // If student found, check DOB
+                if (student && student.dob !== formattedDob) {
+                    console.log(`DOB mismatch for email ${uid}. Expected: ${student.dob}, Got: ${formattedDob}`);
+                    student = null;
+                }
+            } else {
+                // If input is a UID, normalize it
+                const normalizedUid = normalizeUid(uid);
+                console.log(`Looking up student by UID: ${normalizedUid}`);
+
+                // Look up by UID and DOB
+                student = await getStudentByUidAndDob(normalizedUid, formattedDob);
+            }
+
+            console.log(`Student found:`, student ? "Yes" : "No");
 
             if (!student) {
-                return NextResponse.json({ error: 'Invalid UID or Date of Birth' }, { status: 401 });
+                return NextResponse.json({ error: 'Invalid UID/Email or Date of Birth' }, { status: 401 });
             }
 
             console.log("Login successful for student:", student.name);
@@ -51,7 +77,7 @@ export async function POST(req: NextRequest) {
             // Create response with cookies
             const response = NextResponse.json({
                 success: true,
-                message: 'Login successfully',
+                message: 'Login successful',
                 data: {
                     accessToken,
                     refreshToken,
